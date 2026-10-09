@@ -1,0 +1,44 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: sqlite:////data/voting.db
+      ASSET_DIR: /data/assets
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      TOKEN_LIFETIME_HOURS: ${TOKEN_LIFETIME_HOURS:-6}
+      DEFAULT_VOTING_DURATION: ${DEFAULT_VOTING_DURATION:-60}
+      CLEANUP_INTERVAL_MINUTES: ${CLEANUP_INTERVAL_MINUTES:-15}
+    volumes: [voting-data:/data]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web:
+    build: ./frontend
+    depends_on:
+      backend: {condition: service_healthy}
+    networks:
+      - default
+      - frontend
+    restart: unless-stopped
+    labels:
+      - traefik.enable=${TRAEFIK_ENABLED:-false}
+      - traefik.http.routers.voting.rule=Host(`${TRAEFIK_HOST:-voting.example.invalid}`)
+      - traefik.http.routers.voting.entrypoints=websecure
+      - traefik.http.routers.voting.tls=true
+      - traefik.http.routers.voting.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.services.voting.loadbalancer.server.port=8080
+volumes:
+  voting-data:
+networks:
+  frontend:
+    external: true
+    name: frontend
+
