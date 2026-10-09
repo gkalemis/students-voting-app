@@ -8,7 +8,7 @@ from .security import decode_access_token
 bearer = HTTPBearer(auto_error=False)
 
 
-def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
+def authenticated_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
     if not credentials:
         raise HTTPException(401, "Απαιτείται σύνδεση")
     try:
@@ -18,6 +18,14 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bear
         raise HTTPException(401, "Μη έγκυρη ή ληγμένη σύνδεση")
     if not user or not user.active:
         raise HTTPException(401, "Ο λογαριασμός δεν είναι ενεργός")
+    if int(payload.get("ver", -1)) != user.auth_version:
+        raise HTTPException(401, "Η σύνδεση έχει ανακληθεί")
+    return user
+
+
+def current_user(user: User = Depends(authenticated_user)) -> User:
+    if user.must_change_password:
+        raise HTTPException(403, "Απαιτείται αλλαγή προσωρινού κωδικού", headers={"X-Password-Change-Required": "true"})
     return user
 
 

@@ -9,6 +9,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-ntua-civil-voting.kfm.gr,localhost,127.0.0.1}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       TOKEN_LIFETIME_HOURS: ${TOKEN_LIFETIME_HOURS:-6}
       DEFAULT_VOTING_DURATION: ${DEFAULT_VOTING_DURATION:-60}

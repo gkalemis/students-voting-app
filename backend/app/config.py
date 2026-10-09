@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     secret_key: str = "development-only-change-me-32-characters"
     public_base_url: str = "http://localhost:8080"
     allowed_origins: str = "http://localhost:5173,http://localhost:8080"
+    allowed_hosts: str = "localhost,127.0.0.1"
     admin_username: str | None = None
     admin_password: str | None = None
     token_lifetime_hours: int = 6
@@ -38,6 +39,10 @@ class Settings(BaseSettings):
     @property
     def origins(self) -> list[str]:
         return [x.strip() for x in self.allowed_origins.split(",") if x.strip()]
+
+    @property
+    def hosts(self) -> list[str]:
+        return [x.strip() for x in self.allowed_hosts.split(",") if x.strip()]
 
     def ensure_paths(self) -> None:
         Path(self.asset_dir).mkdir(parents=True, exist_ok=True)

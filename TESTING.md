@@ -8,9 +8,11 @@ docker compose config
 docker compose up --build -d
 ```
 
-`docker compose config` does not require the external network to exist. Starting the production stack requires the existing Atlas `frontend` network.
+`docker compose config` does not require the external network to exist. Starting production requires the existing `frontend` network and must wait for verified DNS.
 
-Backend tests cover authentication/ownership, lifecycle, issuance and admission locking, vote edit uniqueness, completion anonymization, result calculation, live presenter audit preservation, concurrent-session isolation, duplication and upload validation. The frontend unit test asserts rating state remains independent of presenter label changes. Manual E2E: use two browser profiles, join from the QR URL, open voting, vote/edit, change the title live, close, skip another presenter, complete/reveal, and inspect both exports.
+Backend tests cover authentication/ownership, first-login replacement, administrator-only creation, password changes, lifecycle, issuance/locking, vote uniqueness, anonymization, calculations, live edits, session isolation, duplication, and uploads. The frontend test covers rating preservation. Manual E2E should include temporary-password restriction, reset-token revocation, two browser profiles, live edits, completion, reveal, and exports.
 
 Deterministic fixtures use an isolated SQLite database. Do not point tests at production. SQLite concurrency is covered by constraints and transactional behavior; it is not a substitute for capacity testing on deployment hardware.
+
+Before release, also perform secret and dependency scans, container vulnerability scanning, migration from a copy of the previous schema, CLI reset testing, malicious upload cases, security-header inspection, and backup restoration. Record real results and never report blocked checks as passed.
 

@@ -20,10 +20,10 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(user_id: int, role: str) -> str:
+def create_access_token(user_id: int, role: str, auth_version: int = 0) -> str:
     settings = get_settings()
     now = datetime.now(timezone.utc)
-    return jwt.encode({"sub": str(user_id), "role": role, "iat": now, "exp": now + timedelta(hours=settings.auth_lifetime_hours)}, settings.secret_key, algorithm="HS256")
+    return jwt.encode({"sub": str(user_id), "role": role, "ver": auth_version, "iat": now, "exp": now + timedelta(hours=settings.auth_lifetime_hours)}, settings.secret_key, algorithm="HS256")
 
 
 def decode_access_token(token: str) -> dict:

@@ -3,6 +3,7 @@ import io
 import mimetypes
 import secrets
 import random
+import zipfile
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,7 @@ from uuid import uuid4
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from openpyxl import Workbook, load_workbook
@@ -21,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from .config import get_settings
 from .database import Base, SessionLocal, engine, get_db
-from .deps import admin_user, current_user, owns
+from .deps import admin_user, authenticated_user, current_user, owns
 from .models import *
 from .realtime import hub
 from .schemas import *
@@ -30,6 +32,8 @@ from .services import aware, cleanup_expired, finalize_votes, results, vote_coun
 
 settings = get_settings()
 vote_attempts: dict[str, deque[datetime]] = defaultdict(deque)
+login_attempts: dict[str, deque[datetime]] = defaultdict(deque)
+DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
 
 
 def bootstrap():
@@ -38,7 +42,7 @@ def bootstrap():
         if settings.admin_username and settings.admin_password:
             existing = db.scalar(select(User).where(User.username == settings.admin_username))
             if not existing:
-                db.add(User(username=settings.admin_username, full_name="Administrator", password_hash=hash_password(settings.admin_password), role=Role.ADMIN))
+                db.add(User(username=settings.admin_username, full_name="Administrator", password_hash=hash_password(settings.admin_password), role=Role.ADMIN, must_change_password=True))
         if not db.get(GlobalBranding, 1):
             db.add(GlobalBranding(id=1, university_name="", school_name="", background_type="none", background_opacity=Decimal("0.12")))
 
@@ -57,12 +61,13 @@ async def lifespan(app):
 
 
 app = FastAPI(title=settings.app_name, version="2.2", lifespan=lifespan)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.hosts)
 app.add_middleware(CORSMiddleware, allow_origins=settings.origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 app.mount("/assets", StaticFiles(directory=settings.asset_dir), name="assets")
 
 
 def user_json(u: User):
-    return {"id": u.id, "username": u.username, "full_name": u.full_name, "role": u.role.value, "active": u.active}
+    return {"id": u.id, "username": u.username, "full_name": u.full_name, "role": u.role.value, "active": u.active, "must_change_password": u.must_change_password}
 
 
 def session_for_user(db, sid, user):
@@ -116,27 +121,40 @@ def check_vote_rate(token: str):
     attempts.append(now)
 
 
+def check_login_rate(username: str):
+    now = datetime.now(timezone.utc); key = hash_token(username.casefold()); attempts = login_attempts[key]
+    while attempts and (now - attempts[0]).total_seconds() > 300: attempts.popleft()
+    if len(attempts) >= 10: raise HTTPException(429, "Πάρα πολλές προσπάθειες· δοκιμάστε αργότερα")
+    attempts.append(now)
+
+
 @app.get("/api/health")
 def health(): return {"status": "ok", "version": "2.2"}
 
 
 @app.post("/api/auth/login")
 def login(data: LoginIn, db: Session = Depends(get_db)):
+    check_login_rate(data.username)
     user = db.scalar(select(User).where(User.username == data.username))
-    if not user or not user.active or not verify_password(data.password, user.password_hash):
+    password_ok = verify_password(data.password, user.password_hash if user else DUMMY_PASSWORD_HASH)
+    if not user or not user.active or not password_ok:
         raise HTTPException(401, "Λανθασμένα στοιχεία σύνδεσης")
-    return {"access_token": create_access_token(user.id, user.role.value), "token_type": "bearer", "user": user_json(user)}
+    login_attempts.pop(hash_token(data.username.casefold()), None)
+    return {"access_token": create_access_token(user.id, user.role.value, user.auth_version), "token_type": "bearer", "user": user_json(user)}
 
 
 @app.get("/api/auth/me")
-def me(user=Depends(current_user)): return user_json(user)
+def me(user=Depends(authenticated_user)): return user_json(user)
 
 
 @app.put("/api/auth/password")
-def password(data: dict, user=Depends(current_user), db: Session = Depends(get_db)):
-    if not verify_password(data.get("current_password", ""), user.password_hash) or len(data.get("new_password", "")) < 10:
+def password(data: PasswordChange, user=Depends(authenticated_user), db: Session = Depends(get_db)):
+    if not verify_password(data.current_password, user.password_hash):
         raise HTTPException(400, "Μη έγκυρος κωδικός")
-    user.password_hash = hash_password(data["new_password"]); db.commit(); return {"ok": True}
+    if data.new_password == data.current_password:
+        raise HTTPException(400, "Ο νέος κωδικός πρέπει να είναι διαφορετικός")
+    user.password_hash = hash_password(data.new_password); user.must_change_password = False; user.auth_version += 1; db.commit()
+    return {"ok": True, "access_token": create_access_token(user.id, user.role.value, user.auth_version)}
 
 
 @app.get("/api/users")
@@ -145,7 +163,7 @@ def users(_=Depends(admin_user), db: Session = Depends(get_db)): return [user_js
 
 @app.post("/api/users", status_code=201)
 def create_user(data: UserCreate, _=Depends(admin_user), db: Session = Depends(get_db)):
-    u = User(username=data.username, full_name=data.full_name, password_hash=hash_password(data.password), role=data.role)
+    u = User(username=data.username, full_name=data.full_name, password_hash=hash_password(data.password), role=data.role, must_change_password=True)
     db.add(u)
     try: db.commit()
     except IntegrityError: db.rollback(); raise HTTPException(409, "Το όνομα χρήστη υπάρχει ήδη")
@@ -158,6 +176,7 @@ def update_user(uid: int, data: UserUpdate, admin=Depends(admin_user), db: Sessi
     if not u: raise HTTPException(404)
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(u, "password_hash" if key == "password" else key, hash_password(value) if key == "password" else value)
+        if key == "password": u.must_change_password = True; u.auth_version += 1
     if u.id == admin.id and not u.active: raise HTTPException(400, "Δεν μπορείτε να απενεργοποιήσετε τον εαυτό σας")
     db.commit(); return user_json(u)
 
@@ -219,6 +238,8 @@ def parse_import(file: UploadFile):
             text = raw.decode("utf-8-sig"); reader = csv.DictReader(io.StringIO(text))
             for r in reader: rows.append({"full_name": (r.get("Student Name") or r.get("Ονοματεπώνυμο") or "").strip(), "presentation_title": (r.get("Presentation Title") or r.get("Τίτλος Παρουσίασης") or "").strip() or None})
         elif file.filename and file.filename.lower().endswith(".xlsx"):
+            with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+                if sum(item.file_size for item in archive.infolist()) > 20_000_000: raise HTTPException(413, "Το αποσυμπιεσμένο αρχείο είναι πολύ μεγάλο")
             wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True); ws = wb.active
             headers = [str(x.value or "").strip() for x in next(ws.iter_rows())]
             for values in ws.iter_rows(values_only=True):
@@ -500,7 +521,9 @@ def safe_image(upload:UploadFile):
     raw=upload.file.read(settings.upload_max_bytes+1)
     if len(raw)>settings.upload_max_bytes: raise HTTPException(413)
     try:
-        image=Image.open(io.BytesIO(raw)); image.verify(); fmt=image.format
+        image=Image.open(io.BytesIO(raw))
+        if image.width * image.height > 25_000_000: raise HTTPException(413, "Η εικόνα έχει υπερβολικές διαστάσεις")
+        image.verify(); fmt=image.format
     except Exception: raise HTTPException(415,"Μη έγκυρη εικόνα")
     if fmt not in {"PNG","JPEG","WEBP"}: raise HTTPException(415,"Υποστηρίζονται PNG, JPEG και WebP. Το SVG απορρίπτεται για ασφάλεια.")
     ext={"PNG":"png","JPEG":"jpg","WEBP":"webp"}[fmt]; name=f"{uuid4().hex}.{ext}"; Path(settings.asset_dir,name).write_bytes(raw); return name

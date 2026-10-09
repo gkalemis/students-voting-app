@@ -1,18 +1,27 @@
 from datetime import date
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from .models import Role
 
 
 class LoginIn(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=100, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str = Field(min_length=1, max_length=200)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=10, max_length=200)
 
 
 class UserCreate(BaseModel):
-    username: str = Field(min_length=3, max_length=100)
+    username: str = Field(min_length=3, max_length=100, pattern=r"^[A-Za-z0-9_.-]+$")
     full_name: str = Field(min_length=1, max_length=200)
     password: str = Field(min_length=10, max_length=200)
     role: Role = Role.LECTURER
+
+    @field_validator("username")
+    @classmethod
+    def normalized_username(cls, value: str): return value.casefold()
 
 
 class UserUpdate(BaseModel):

@@ -4,8 +4,11 @@ from app.models import AnonymousVoteScore,ParticipationToken,PresentationEdit,Vo
 from sqlalchemy import func,select
 from .conftest import auth
 def lecturer(client,admin,name='lecturer'):
- client.post('/api/users',headers=auth(admin),json={'username':name,'full_name':name,'password':'lecturer-password','role':'LECTURER'})
- return client.post('/api/auth/login',json={'username':name,'password':'lecturer-password'}).json()['access_token']
+ client.post('/api/users',headers=auth(admin),json={'username':name,'full_name':name,'password':'temporary-password-123','role':'LECTURER'})
+ token=client.post('/api/auth/login',json={'username':name,'password':'temporary-password-123'}).json()['access_token']
+ assert client.get('/api/courses',headers=auth(token)).status_code==403
+ result=client.put('/api/auth/password',headers=auth(token),json={'current_password':'temporary-password-123','new_password':'lecturer-password'}).json()
+ return result['access_token']
 def setup(client,h):
  c=client.post('/api/courses',headers=h,json={'name':'Μεθοδολογία'}).json();p=client.post('/api/periods',headers=h,json={'name':'Χειμερινό 2026'}).json();g=client.post('/api/groups',headers=h,json={'title':'Ομάδα Γ','course_id':c['id'],'period_id':p['id']}).json()
  s=client.post('/api/sessions',headers=h,json={'course_id':c['id'],'period_id':p['id'],'group_id':g['id'],'session_date':'2026-10-21','criteria':[{'name':'Ακρίβεια','weight':50},{'name':'Σαφήνεια','weight':50}],'presenters':[{'full_name':'Μαρία','presentation_title':None},{'full_name':'Νίκος','presentation_title':'Τίτλος'}]}).json();return c,p,g,s

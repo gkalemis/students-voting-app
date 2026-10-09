@@ -2,6 +2,8 @@
 
 Contributions are welcome through GitHub issues and pull requests. Do not include real student data, production databases, `.env` files, credentials, exported results, or uploaded institutional assets in issues, fixtures, commits, or screenshots.
 
+Security-sensitive changes need authorization-failure tests as well as success tests. Do not weaken first-login enforcement, ownership filters, vote uniqueness, anonymization, upload decoding, or export sanitization.
+
 ## Development workflow
 
 1. Create a focused branch from the current default branch.

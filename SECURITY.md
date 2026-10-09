@@ -14,3 +14,13 @@ Do not test against the production service or real classroom sessions without ex
 
 Operators must generate unique secrets, use HTTPS, remove bootstrap credentials after initialization, restrict database and asset backups, update dependencies, and minimize reverse-proxy access-log retention. The application does not use IP addresses as participant identity, but proxy infrastructure may log them independently.
 
+Temporary-password accounts are restricted until replacement. Password change/reset revokes existing JWTs. Only administrators create professors; authorized server operators may use the container reset command. Email recovery is not implemented.
+
+## Data handling
+
+Never publish real names, exports, databases, branding assets, logs, tokens, or credentials. Use synthetic fixtures. Protect volumes and backups; anonymous voting reduces linkability but presenter names and detailed scores may remain sensitive educational records.
+
+## Known boundaries
+
+Bearer tokens use browser local storage, making Content Security Policy and dependency integrity important. Login/vote throttles and WebSocket state are process-local; horizontal deployments require shared coordination. SQLite targets the documented small deployment. See `TODO.md`.
+
