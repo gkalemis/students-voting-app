@@ -1,8 +1,6 @@
-# Student Presentation Voting 2.2
+# Student Presentation Voting 2.3
 
 Self-hosted Greek-first classroom voting for multiple lecturers and concurrent sessions. It includes anonymous six-hour participant credentials, editable votes, weighted criteria, live presenter updates, early completion and anonymization, CSV/XLSX imports and exports, demo flags, duplication, projector mode, and global/course branding.
-
-Configured production URL: `https://ntua-civil-voting.kfm.gr`
 
 Only administrators can create or manage professor accounts. Bootstrap, new, and reset accounts must replace their temporary password under **Λογαριασμός** before using application features. Password changes and resets revoke older login tokens.
 
@@ -39,13 +37,13 @@ The REST/OpenAPI interface is at `/docs` on the backend in development. UI langu
 
 ## Production behind an existing Traefik
 
-The single `compose.yaml` connects the web service to the existing external Docker network named `frontend`, where an already-running Traefik container discovers it through labels. It neither creates nor modifies Traefik.
+The single `compose.yaml` connects the web service to the external network named by `TRAEFIK_NETWORK`, where an already-running Traefik container discovers it through environment-driven labels. It neither creates nor modifies Traefik.
 
 ```bash
 docker compose up --build -d
 ```
 
-No application port is published directly on the host. Adjust `TRAEFIK_CERTRESOLVER` if the proxy uses another resolver name. Verify DNS before deployment.
+No application port is published directly on the host. All domain, network, router, entrypoint, and resolver identifiers belong only in the ignored deployment `.env`. Verify DNS before deployment.
 
 ## Classroom workflow
 

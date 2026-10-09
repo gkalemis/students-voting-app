@@ -9,7 +9,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-ntua-civil-voting.kfm.gr,localhost,127.0.0.1}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       TOKEN_LIFETIME_HOURS: ${TOKEN_LIFETIME_HOURS:-6}
       DEFAULT_VOTING_DURATION: ${DEFAULT_VOTING_DURATION:-60}
@@ -31,15 +31,15 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=${TRAEFIK_ENABLED:-false}
-      - traefik.http.routers.voting.rule=Host(`${TRAEFIK_HOST:-voting.example.invalid}`)
-      - traefik.http.routers.voting.entrypoints=websecure
-      - traefik.http.routers.voting.tls=true
-      - traefik.http.routers.voting.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
-      - traefik.http.services.voting.loadbalancer.server.port=8080
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.rule=Host(`${TRAEFIK_HOST:?Set TRAEFIK_HOST in .env}`)
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.entrypoints=${TRAEFIK_ENTRYPOINT:?Set TRAEFIK_ENTRYPOINT in .env}
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.tls=true
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.tls.certresolver=${TRAEFIK_CERTRESOLVER:?Set TRAEFIK_CERTRESOLVER in .env}
+      - traefik.http.services.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.loadbalancer.server.port=8080
 volumes:
   voting-data:
 networks:
   frontend:
     external: true
-    name: frontend
+    name: ${TRAEFIK_NETWORK:?Set TRAEFIK_NETWORK in .env}
 

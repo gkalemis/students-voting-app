@@ -8,7 +8,7 @@ docker compose config
 docker compose up --build -d
 ```
 
-`docker compose config` does not require the external network to exist. Starting production requires the existing `frontend` network and must wait for verified DNS.
+`docker compose config` does not require the external network to exist, but it does require non-secret placeholder values for every mandatory deployment variable. Starting production requires the configured external network and must wait for verified DNS.
 
 Backend tests cover authentication/ownership, first-login replacement, administrator-only creation, password changes, lifecycle, issuance/locking, vote uniqueness, anonymization, calculations, live edits, session isolation, duplication, and uploads. The frontend test covers rating preservation. Manual E2E should include temporary-password restriction, reset-token revocation, two browser profiles, live edits, completion, reveal, and exports.
 

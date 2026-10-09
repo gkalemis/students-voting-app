@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 — 2026-10-09
 
 - Require bootstrap, new, and reset accounts to replace temporary passwords before accessing application features.
 - Add a container CLI that generates reset passwords without process-argument exposure.
 - Revoke existing JWTs on password change/reset using per-user authentication versions.
 - Add login throttling, constant-cost unknown-user verification, trusted hosts, typed password input, upload expansion/dimension limits, and strict browser headers.
 - Expand and sanitize public documentation and add a future-work register.
+- Remove deployment-specific domains and proxy identifiers from the tracked tree; require them through the ignored runtime environment.
 
 ## 2.2.0
 
@@ -17,6 +18,6 @@
 - Added automated lifecycle, isolation, security and branding tests.
 - Prepared the repository for public GitHub use with an MIT license, contributor/security guidance, issue and pull-request templates, Dependabot, and CI.
 - Added a self-service password-change screen while retaining administrator-only professor creation.
-- Added the production Traefik configuration for `ntua-civil-voting.kfm.gr`.
+- Added environment-driven integration with an existing production Traefik instance.
 - Consolidated existing-Traefik integration into the single `compose.yaml`; no separate override or direct host port is used.
 

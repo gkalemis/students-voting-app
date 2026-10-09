@@ -60,7 +60,7 @@ async def lifespan(app):
     scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title=settings.app_name, version="2.2", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="2.3.0", lifespan=lifespan)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.hosts)
 app.add_middleware(CORSMiddleware, allow_origins=settings.origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 app.mount("/assets", StaticFiles(directory=settings.asset_dir), name="assets")
@@ -129,7 +129,7 @@ def check_login_rate(username: str):
 
 
 @app.get("/api/health")
-def health(): return {"status": "ok", "version": "2.2"}
+def health(): return {"status": "ok", "version": "2.3.0"}
 
 
 @app.post("/api/auth/login")

@@ -15,6 +15,7 @@ Planned work listed here is not represented as complete.
 - Run pytest, Vitest/build, browser E2E, migration-from-v2.2, image builds, dependency audits, and container scans.
 - Test first-login enforcement and `python -m app.cli reset-password USERNAME` with a disposable database.
 - Verify DNS, TLS, headers, WebSockets, QR reachability, and restore procedures before deployment.
+- Evaluate whether previously published deployment metadata warrants a coordinated Git history rewrite; do not force-push without explicit approval.
 
 ## Product and operations
 
