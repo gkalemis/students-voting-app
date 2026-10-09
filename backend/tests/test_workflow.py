@@ -1,6 +1,6 @@
 from datetime import date
 from app.database import SessionLocal
-from app.models import AnonymousVoteScore,ParticipationToken,PresentationEdit,Vote
+from app.models import AnonymousVoteScore,ParticipationToken,PresentationEdit,Vote,User
 from sqlalchemy import func,select
 from .conftest import auth
 def lecturer(client,admin,name='lecturer'):
@@ -10,7 +10,7 @@ def lecturer(client,admin,name='lecturer'):
  result=client.put('/api/auth/password',headers=auth(token),json={'current_password':'temporary-password-123','new_password':'lecturer-password'}).json()
  return result['access_token']
 def setup(client,h):
- c=client.post('/api/courses',headers=h,json={'name':'Μεθοδολογία'}).json();p=client.post('/api/periods',headers=h,json={'name':'Χειμερινό 2026'}).json();g=client.post('/api/groups',headers=h,json={'title':'Ομάδα Γ','course_id':c['id'],'period_id':p['id']}).json()
+ p=client.post('/api/periods',headers=h,json={'name':'Χειμερινό 2026'}).json();c=client.post('/api/courses',headers=h,json={'name':'Μεθοδολογία','period_id':p['id']}).json();g=client.post('/api/groups',headers=h,json={'title':'Ομάδα Γ','course_id':c['id'],'period_id':p['id'],'presentation_date':'2026-10-21'}).json()
  s=client.post('/api/sessions',headers=h,json={'course_id':c['id'],'period_id':p['id'],'group_id':g['id'],'session_date':'2026-10-21','criteria':[{'name':'Ακρίβεια','weight':50},{'name':'Σαφήνεια','weight':50}],'presenters':[{'full_name':'Μαρία','presentation_title':None},{'full_name':'Νίκος','presentation_title':'Τίτλος'}]}).json();return c,p,g,s
 def test_complete_acceptance_and_anonymization(client,admin):
  t=lecturer(client,admin);h=auth(t);c,p,g,s=setup(client,h);detail=client.get(f"/api/sessions/{s['id']}",headers=h).json();pid=detail['presentations'][0]['id'];criteria=detail['criteria']
@@ -42,5 +42,18 @@ def test_only_admin_creates_users_and_lecturer_changes_password(client,admin):
  assert client.put('/api/auth/password',headers=h,json={'current_password':'wrong','new_password':'new-password-123'}).status_code==400
  assert client.put('/api/auth/password',headers=h,json={'current_password':'lecturer-password','new_password':'new-password-123'}).status_code==200
  assert client.post('/api/auth/login',json={'username':'lecturer','password':'lecturer-password'}).status_code==401
- assert client.post('/api/auth/login',json={'username':'lecturer','password':'new-password-123'}).status_code==200
+ login=client.post('/api/auth/login',json={'username':'lecturer','password':'new-password-123'});assert login.status_code==200;new_h=auth(login.json()['access_token'])
+ assert client.put('/api/auth/theme',headers=new_h,json={'color':'#526d82'}).json()['theme_color']=='#526d82'
+ assert client.put('/api/auth/theme',headers=new_h,json={'color':'red'}).status_code==422
+
+def test_admin_cascade_removal_policy(client,admin):
+ t=lecturer(client,admin);h=auth(t);c,p,g,s=setup(client,h)
+ assert client.delete(f"/api/courses/{c['id']}",headers=h).status_code==403
+ assert client.delete(f"/api/courses/{c['id']}",headers=auth(admin)).status_code==204
+ assert client.get(f"/api/sessions/{s['id']}",headers=auth(admin)).status_code==404
+ assert client.delete(f"/api/groups/{g['id']}",headers=auth(admin)).status_code==404
+ assert client.delete(f"/api/periods/{p['id']}",headers=auth(admin)).status_code==204
+ with SessionLocal() as db: uid=db.scalar(select(User.id).where(User.username=='lecturer'))
+ assert client.delete(f'/api/users/{uid}',headers=auth(admin)).status_code==204
+ assert client.post('/api/auth/login',json={'username':'lecturer','password':'lecturer-password'}).status_code==401
 

@@ -1,6 +1,13 @@
 services:
+  data-init:
+    image: alpine:3.24.2
+    command: ["sh", "-c", "mkdir -p /data/assets && chown -R 10001:10001 /data"]
+    volumes: [voting-data:/data]
+    restart: "no"
   backend:
     build: ./backend
+    depends_on:
+      data-init: {condition: service_completed_successfully}
     environment:
       DATABASE_URL: sqlite:////data/voting.db
       ASSET_DIR: /data/assets
@@ -31,6 +38,7 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=${TRAEFIK_ENABLED:-false}
+      - traefik.docker.network=${TRAEFIK_NETWORK:?Set TRAEFIK_NETWORK in .env}
       - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.rule=Host(`${TRAEFIK_HOST:?Set TRAEFIK_HOST in .env}`)
       - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.entrypoints=${TRAEFIK_ENTRYPOINT:?Set TRAEFIK_ENTRYPOINT in .env}
       - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.tls=true

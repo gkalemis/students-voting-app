@@ -45,6 +45,7 @@ class User(Base, TimestampMixin):
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
     auth_version: Mapped[int] = mapped_column(Integer, default=0)
+    theme_color: Mapped[str] = mapped_column(String(7), default="#526d82")
 
 
 class BrandingMixin:
@@ -69,6 +70,7 @@ class Course(Base, TimestampMixin, BrandingMixin):
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    period_id: Mapped[int | None] = mapped_column(ForeignKey("academic_periods.id"), index=True, nullable=True)
 
 
 class AcademicPeriod(Base, TimestampMixin):
@@ -86,6 +88,7 @@ class StudentGroup(Base, TimestampMixin):
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
     period_id: Mapped[int] = mapped_column(ForeignKey("academic_periods.id"))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    presentation_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
 
 class Student(Base, TimestampMixin):

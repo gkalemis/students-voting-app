@@ -60,14 +60,14 @@ async def lifespan(app):
     scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title=settings.app_name, version="2.3.0", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="2.4.0", lifespan=lifespan)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.hosts)
 app.add_middleware(CORSMiddleware, allow_origins=settings.origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
 app.mount("/assets", StaticFiles(directory=settings.asset_dir), name="assets")
 
 
 def user_json(u: User):
-    return {"id": u.id, "username": u.username, "full_name": u.full_name, "role": u.role.value, "active": u.active, "must_change_password": u.must_change_password}
+    return {"id": u.id, "username": u.username, "full_name": u.full_name, "role": u.role.value, "active": u.active, "must_change_password": u.must_change_password, "theme_color": u.theme_color}
 
 
 def session_for_user(db, sid, user):
@@ -80,6 +80,51 @@ def session_for_user(db, sid, user):
 
 def current_open(db, session_id):
     return db.scalar(select(Presentation).where(Presentation.session_id == session_id, Presentation.status == PresentationStatus.VOTING_OPEN))
+
+
+def purge_session(db: Session, sid: int):
+    presentation_ids = select(Presentation.id).where(Presentation.session_id == sid)
+    criterion_ids = select(Criterion.id).where(Criterion.session_id == sid)
+    vote_ids = select(Vote.id).where(Vote.presentation_id.in_(presentation_ids))
+    db.execute(delete(VoteScore).where(VoteScore.vote_id.in_(vote_ids)))
+    db.execute(delete(AnonymousVoteScore).where(AnonymousVoteScore.presentation_id.in_(presentation_ids)))
+    db.execute(delete(PresentationEdit).where(PresentationEdit.presentation_id.in_(presentation_ids)))
+    db.execute(delete(Vote).where(Vote.presentation_id.in_(presentation_ids)))
+    db.execute(delete(ParticipationToken).where(ParticipationToken.session_id == sid))
+    db.execute(delete(Presentation).where(Presentation.session_id == sid))
+    db.execute(delete(Criterion).where(Criterion.id.in_(criterion_ids)))
+    db.execute(delete(PresentationSession).where(PresentationSession.id == sid))
+
+
+def purge_group(db: Session, gid: int):
+    for sid in db.scalars(select(PresentationSession.id).where(PresentationSession.group_id == gid)).all(): purge_session(db, sid)
+    db.execute(delete(Student).where(Student.group_id == gid))
+    db.execute(delete(StudentGroup).where(StudentGroup.id == gid))
+
+
+def purge_course(db: Session, cid: int):
+    course = db.get(Course, cid)
+    for sid in db.scalars(select(PresentationSession.id).where(PresentationSession.course_id == cid)).all(): purge_session(db, sid)
+    for gid in db.scalars(select(StudentGroup.id).where(StudentGroup.course_id == cid)).all(): purge_group(db, gid)
+    if course:
+        for filename in (course.logo_path, course.background_image_path):
+            if filename: (Path(settings.asset_dir) / Path(filename).name).unlink(missing_ok=True)
+    db.execute(delete(Course).where(Course.id == cid))
+
+
+def purge_period(db: Session, pid: int):
+    for cid in db.scalars(select(Course.id).where(Course.period_id == pid)).all(): purge_course(db, cid)
+    for gid in db.scalars(select(StudentGroup.id).where(StudentGroup.period_id == pid)).all(): purge_group(db, gid)
+    for sid in db.scalars(select(PresentationSession.id).where(PresentationSession.period_id == pid)).all(): purge_session(db, sid)
+    db.execute(delete(AcademicPeriod).where(AcademicPeriod.id == pid))
+
+
+def purge_owner(db: Session, uid: int):
+    db.execute(delete(PresentationEdit).where(PresentationEdit.changed_by_id == uid))
+    for sid in db.scalars(select(PresentationSession.id).where(PresentationSession.owner_id == uid)).all(): purge_session(db, sid)
+    for cid in db.scalars(select(Course.id).where(Course.owner_id == uid)).all(): purge_course(db, cid)
+    for gid in db.scalars(select(StudentGroup.id).where(StudentGroup.owner_id == uid)).all(): purge_group(db, gid)
+    for pid in db.scalars(select(AcademicPeriod.id).where(AcademicPeriod.owner_id == uid)).all(): purge_period(db, pid)
 
 
 def branding_json(b):
@@ -129,7 +174,7 @@ def check_login_rate(username: str):
 
 
 @app.get("/api/health")
-def health(): return {"status": "ok", "version": "2.3.0"}
+def health(): return {"status": "ok", "version": "2.4.0"}
 
 
 @app.post("/api/auth/login")
@@ -157,6 +202,11 @@ def password(data: PasswordChange, user=Depends(authenticated_user), db: Session
     return {"ok": True, "access_token": create_access_token(user.id, user.role.value, user.auth_version)}
 
 
+@app.put("/api/auth/theme")
+def theme(data: ThemeIn, user=Depends(authenticated_user), db: Session = Depends(get_db)):
+    user.theme_color = data.color.lower(); db.commit(); return {"theme_color": user.theme_color}
+
+
 @app.get("/api/users")
 def users(_=Depends(admin_user), db: Session = Depends(get_db)): return [user_json(x) for x in db.scalars(select(User)).all()]
 
@@ -181,15 +231,33 @@ def update_user(uid: int, data: UserUpdate, admin=Depends(admin_user), db: Sessi
     db.commit(); return user_json(u)
 
 
+@app.delete("/api/users/{uid}", status_code=204)
+def delete_user(uid: int, admin=Depends(admin_user), db: Session = Depends(get_db)):
+    u = db.get(User, uid)
+    if not u: raise HTTPException(404, "Δεν βρέθηκε")
+    if u.id == admin.id: raise HTTPException(400, "Δεν μπορείτε να διαγράψετε τον εαυτό σας")
+    purge_owner(db, u.id); db.delete(u); db.commit(); return Response(status_code=204)
+
+
 @app.get("/api/courses")
 def list_courses(user=Depends(current_user), db: Session = Depends(get_db)):
     q = select(Course) if user.role == Role.ADMIN else select(Course).where(Course.owner_id == user.id)
-    return [{"id": x.id, "name": x.name, "description": x.description, "owner_id": x.owner_id, "branding": effective_branding(db, x)} for x in db.scalars(q).all()]
+    return [{"id": x.id, "name": x.name, "description": x.description, "owner_id": x.owner_id, "period_id": x.period_id, "branding": effective_branding(db, x)} for x in db.scalars(q).all()]
 
 
 @app.post("/api/courses", status_code=201)
 def create_course(data: CourseIn, user=Depends(current_user), db: Session = Depends(get_db)):
+    period = db.get(AcademicPeriod, data.period_id)
+    if not period: raise HTTPException(400, "Μη έγκυρη περίοδος")
+    owns(period.owner_id, user)
     item = Course(**data.model_dump(), owner_id=user.id); db.add(item); db.commit(); db.refresh(item); return {"id": item.id, **data.model_dump()}
+
+
+@app.delete("/api/courses/{cid}", status_code=204)
+def delete_course(cid: int, _=Depends(admin_user), db: Session = Depends(get_db)):
+    item = db.get(Course, cid)
+    if not item: raise HTTPException(404, "Δεν βρέθηκε")
+    purge_course(db, cid); db.commit(); return Response(status_code=204)
 
 
 @app.get("/api/periods")
@@ -203,18 +271,32 @@ def create_period(data: PeriodIn, user=Depends(current_user), db: Session = Depe
     x = AcademicPeriod(name=data.name, owner_id=user.id); db.add(x); db.commit(); return {"id": x.id, "name": x.name}
 
 
+@app.delete("/api/periods/{pid}", status_code=204)
+def delete_period(pid: int, _=Depends(admin_user), db: Session = Depends(get_db)):
+    item = db.get(AcademicPeriod, pid)
+    if not item: raise HTTPException(404, "Δεν βρέθηκε")
+    purge_period(db, pid); db.commit(); return Response(status_code=204)
+
+
 @app.get("/api/groups")
 def groups(user=Depends(current_user), db: Session = Depends(get_db)):
     q = select(StudentGroup) if user.role == Role.ADMIN else select(StudentGroup).where(StudentGroup.owner_id == user.id)
-    return [{"id": x.id, "title": x.title, "course_id": x.course_id, "period_id": x.period_id} for x in db.scalars(q).all()]
+    return [{"id": x.id, "title": x.title, "course_id": x.course_id, "period_id": x.period_id, "presentation_date": x.presentation_date} for x in db.scalars(q).all()]
 
 
 @app.post("/api/groups", status_code=201)
 def create_group(data: GroupIn, user=Depends(current_user), db: Session = Depends(get_db)):
     course, period = db.get(Course, data.course_id), db.get(AcademicPeriod, data.period_id)
-    if not course or not period: raise HTTPException(400, "Μη έγκυρη επιλογή")
+    if not course or not period or course.period_id != period.id: raise HTTPException(400, "Μη έγκυρη επιλογή")
     owns(course.owner_id, user); owns(period.owner_id, user)
     x = StudentGroup(**data.model_dump(), owner_id=user.id); db.add(x); db.commit(); return {"id": x.id, **data.model_dump()}
+
+
+@app.delete("/api/groups/{gid}", status_code=204)
+def delete_group(gid: int, _=Depends(admin_user), db: Session = Depends(get_db)):
+    item = db.get(StudentGroup, gid)
+    if not item: raise HTTPException(404, "Δεν βρέθηκε")
+    purge_group(db, gid); db.commit(); return Response(status_code=204)
 
 
 @app.get("/api/groups/{gid}/students")
@@ -227,6 +309,13 @@ def students(gid: int, user=Depends(current_user), db: Session = Depends(get_db)
 def add_student(gid: int, data: StudentIn, user=Depends(current_user), db: Session = Depends(get_db)):
     g = db.get(StudentGroup, gid); owns(g.owner_id, user) if g else (_ for _ in ()).throw(HTTPException(404))
     x = Student(group_id=gid, **data.model_dump()); db.add(x); db.commit(); return {"id": x.id, **data.model_dump()}
+
+
+@app.delete("/api/groups/{gid}/students/{student_id}", status_code=204)
+def delete_student(gid: int, student_id: int, user=Depends(current_user), db: Session = Depends(get_db)):
+    group, student = db.get(StudentGroup, gid), db.get(Student, student_id)
+    if not group or not student or student.group_id != gid: raise HTTPException(404, "Δεν βρέθηκε")
+    owns(group.owner_id, user); db.delete(student); db.commit(); return Response(status_code=204)
 
 
 def parse_import(file: UploadFile):
@@ -284,9 +373,10 @@ def sessions(user=Depends(current_user), db: Session = Depends(get_db)):
 @app.post("/api/sessions", status_code=201)
 def create_session(data: SessionCreate, user=Depends(current_user), db: Session = Depends(get_db)):
     course, period, group = db.get(Course, data.course_id), db.get(AcademicPeriod, data.period_id), db.get(StudentGroup, data.group_id)
-    if not all((course, period, group)): raise HTTPException(400, "Μη έγκυρη επιλογή")
+    if not all((course, period, group)) or group.course_id != course.id or group.period_id != period.id: raise HTTPException(400, "Μη έγκυρη επιλογή")
     for x in (course, period, group): owns(x.owner_id, user)
-    s = PresentationSession(public_id=secrets.token_urlsafe(12), owner_id=user.id, **data.model_dump(exclude={"criteria", "presenters"})); db.add(s); db.flush()
+    session_data = data.model_dump(exclude={"criteria", "presenters"}); session_data["session_date"] = group.presentation_date or data.session_date
+    s = PresentationSession(public_id=secrets.token_urlsafe(12), owner_id=user.id, **session_data); db.add(s); db.flush()
     for i, c in enumerate(data.criteria): db.add(Criterion(session_id=s.id, position=i, **c.model_dump()))
     presenters = data.presenters or [StudentIn(full_name=x.full_name, presentation_title=x.presentation_title) for x in db.scalars(select(Student).where(Student.group_id == data.group_id)).all()]
     for i, p in enumerate(presenters): db.add(Presentation(session_id=s.id, presenter_name=p.full_name, title=p.presentation_title, position=i))
@@ -395,7 +485,7 @@ async def reveal(sid:int,user=Depends(current_user),db:Session=Depends(get_db)):
 @app.post("/api/sessions/{sid}/duplicate")
 def duplicate(sid:int,data:DuplicateIn,user=Depends(current_user),db:Session=Depends(get_db)):
     old=session_for_user(db,sid,user); gid=data.group_id or old.group_id; group=db.get(StudentGroup,gid); owns(group.owner_id,user)
-    new=PresentationSession(public_id=secrets.token_urlsafe(12),course_id=old.course_id,period_id=old.period_id,group_id=gid,owner_id=user.id,session_date=data.session_date,title=old.title,status=SessionStatus.DRAFT,voting_duration=old.voting_duration,is_demo=old.is_demo); db.add(new); db.flush()
+    new=PresentationSession(public_id=secrets.token_urlsafe(12),course_id=old.course_id,period_id=old.period_id,group_id=gid,owner_id=user.id,session_date=group.presentation_date or data.session_date,title=old.title,status=SessionStatus.DRAFT,voting_duration=old.voting_duration,is_demo=old.is_demo); db.add(new); db.flush()
     for c in db.scalars(select(Criterion).where(Criterion.session_id==sid)).all(): db.add(Criterion(session_id=new.id,name=c.name,weight=c.weight,position=c.position))
     source=db.scalars(select(Student).where(Student.group_id==gid)).all()
     for i,x in enumerate(source): db.add(Presentation(session_id=new.id,student_id=x.id,presenter_name=x.full_name,title=x.presentation_title,position=i))
@@ -434,6 +524,13 @@ def delete_demo(sid: int, user=Depends(current_user), db: Session = Depends(get_
     s = session_for_user(db, sid, user)
     if not s.is_demo: raise HTTPException(409)
     db.delete(s); db.commit(); return Response(status_code=204)
+
+
+@app.delete("/api/sessions/{sid}", status_code=204)
+def admin_delete_session(sid: int, _=Depends(admin_user), db: Session = Depends(get_db)):
+    s = db.get(PresentationSession, sid)
+    if not s: raise HTTPException(404, "Δεν βρέθηκε")
+    purge_session(db, sid); db.commit(); return Response(status_code=204)
 
 
 @app.get("/api/public/sessions/{public_id}")

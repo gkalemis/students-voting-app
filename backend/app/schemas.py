@@ -34,6 +34,7 @@ class UserUpdate(BaseModel):
 class CourseIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=3000)
+    period_id: int
 
 
 class PeriodIn(BaseModel):
@@ -44,6 +45,11 @@ class GroupIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     course_id: int
     period_id: int
+    presentation_date: date
+
+
+class ThemeIn(BaseModel):
+    color: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
 
 
 class StudentIn(BaseModel):

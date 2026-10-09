@@ -1,2 +1,4 @@
 import{describe,it,expect}from'vitest';
+import{translations,translateError}from'./i18n';
 describe('student form state identity',()=>{it('keeps ratings when presenter text changes but id remains stable',()=>{const ratings={1:4,2:5};const before={id:7,presenter_name:'Α',title:''};const after={...before,presenter_name:'Β',title:'Νέο'};expect(after.id).toBe(before.id);expect(ratings).toEqual({1:4,2:5})})});
+describe('localization',()=>{it('contains matching Greek and English keys',()=>{expect(Object.keys(translations.el).sort()).toEqual(Object.keys(translations.en).sort())});it('translates known API errors',()=>{expect(translateError(new Error('Το όνομα χρήστη υπάρχει ήδη'),'en')).toBe('That username already exists');expect(translateError(new Error("username: String should match pattern"),'el')).toContain('λατινικούς')})});

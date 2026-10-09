@@ -14,6 +14,8 @@ Do not test against the production service or real classroom sessions without ex
 
 Operators must generate unique secrets, use HTTPS, remove bootstrap credentials after initialization, restrict database and asset backups, update dependencies, and minimize reverse-proxy access-log retention. The application does not use IP addresses as participant identity, but proxy infrastructure may log them independently.
 
+The web service emits a one-year HSTS policy with `includeSubDomains` after HTTPS termination at the reverse proxy. The preload directive is intentionally omitted; operators must not enable preload without reviewing every subdomain and accepting its long-lived consequences.
+
 Temporary-password accounts are restricted until replacement. Password change/reset revokes existing JWTs. Only administrators create professors; authorized server operators may use the container reset command. Email recovery is not implemented.
 
 ## Data handling

@@ -13,6 +13,10 @@ Do not start the stack until DNS is verified.
 
 Copy `.env.example`, generate secrets, and run `docker compose up --build -d` only after DNS is ready. Database/assets persist in `voting-data`; the web service is reachable only through the existing Traefik container.
 
+The one-shot `data-init` service creates the asset directory and assigns the persistent volume to backend UID `10001`. It must complete successfully before the non-root backend starts. Seeing `data-init` in an exited-success state is expected.
+
+Container base images are pinned to explicit supported patch/distribution tags. Dependabot monitors them; review and test updates rather than switching to floating `latest` tags.
+
 ## Traefik/private HTTPS
 
 Set `PUBLIC_BASE_URL`, exact `ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `TRAEFIK_HOST`, `TRAEFIK_NETWORK`, `TRAEFIK_ROUTER_NAME`, `TRAEFIK_ENTRYPOINT`, and `TRAEFIK_CERTRESOLVER` only in the ignored deployment `.env`. The single `compose.yaml` consumes these values without revealing infrastructure metadata. It does not create or modify Traefik, and neither service publishes a host port.
@@ -26,4 +30,6 @@ Back up first, then `docker compose build --pull && docker compose up -d`; the b
 Troubleshooting: confirm `.env` values, `docker compose logs`, health status, phone-to-host routing, campus client isolation, firewall port, HTTPS mixed-content rules, and proxy WebSocket forwarding.
 
 After bootstrap, replace the temporary administrator password, remove `ADMIN_PASSWORD` from `.env`, and recreate the backend. Validate HTTPS, headers, WebSockets, QR reachability, backup, and restore before classroom use.
+
+Confirm that public HTTPS responses include `Strict-Transport-Security: max-age=31536000; includeSubDomains`. HSTS preload is intentionally not enabled.
 

@@ -20,8 +20,9 @@ Planned work listed here is not represented as complete.
 ## Product and operations
 
 - Add polished UI for ownership transfer, demo reset/generation, import mapping, course assets, and administrator password resets.
-- Introduce localization catalogs before English translation.
+- Extend localization to administrator-defined content and exported workbook headings if bilingual exports become a requirement.
 - Add credential-free audit events for account administration and resets.
 - Define retention policies for sessions, exports, backups, application logs, and proxy logs.
 - Add PostgreSQL migration and Redis coordination before horizontal scaling.
 - Perform keyboard, screen-reader, contrast, and reduced-motion accessibility testing.
+- Add Playwright visual regression coverage for the documented phone/tablet viewport matrix once browser dependencies are available.

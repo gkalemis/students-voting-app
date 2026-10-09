@@ -4,7 +4,7 @@ The React/Vite SPA is served by nginx, which proxies REST, WebSocket, and asset 
 
 ## Data and authorization
 
-Users own courses, periods, groups and sessions. Every protected object lookup applies owner-or-admin authorization, returning 404 to lecturers for foreign resources. A session has stable presentations, ordered criteria, tokens, votes/scores, anonymous scores, and presenter edit events. Presentation names/titles are labels only; votes reference immutable numeric IDs.
+Lecturers own a strict period → course → group → students hierarchy plus its sessions. Each group carries its common presentation date. Every protected lookup applies owner-or-admin authorization, returning 404 to lecturers for foreign resources. Administrator deletion explicitly traverses and removes subordinate voting records in foreign-key-safe order. A session has stable presentations, ordered criteria, tokens, votes/scores, anonymous scores, and presenter edit events.
 
 JWTs contain a per-user authentication version. Password changes and resets increment it, invalidating older tokens. New/bootstrap/reset accounts carry `must_change_password`; only identity inspection and password replacement remain available until it is cleared. Only administrators create accounts; server operators can invoke identical reset semantics through the container CLI.
 
