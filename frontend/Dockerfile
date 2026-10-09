@@ -1,4 +1,4 @@
-FROM node:24.21.0-alpine3.24 AS build
+FROM node:26.10.0-alpine3.24 AS build
 WORKDIR /src
 COPY package*.json ./
 RUN npm install
