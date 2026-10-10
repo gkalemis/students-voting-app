@@ -4,15 +4,23 @@ Self-hosted bilingual Greek–English classroom voting for multiple lecturers an
 
 Only administrators can create or manage professor accounts. Bootstrap, new, and reset accounts must replace their temporary password under **Λογαριασμός** before using application features. Password changes and resets revoke older login tokens.
 
-## Quick start with Docker
+## Configuration & Quick Start with Docker
 
-```bash
-cp .env.example .env
-# Replace SECRET_KEY, ADMIN_PASSWORD and PUBLIC_BASE_URL
-docker compose up --build -d
-```
+Before running the application, you must create a `.env` file based on `.env.example` and fill in your custom passwords, secret keys, port, and public URLs.
 
-Open the configured `PUBLIC_BASE_URL`. The bootstrap administrator is created only when the username does not exist and must replace the bootstrap password immediately. Then remove `ADMIN_PASSWORD` from the runtime environment; never commit `.env`.
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set secure values for:
+   - `ADMIN_USERNAME` and `ADMIN_PASSWORD` (initial administrator credentials)
+   - `SECRET_KEY` (a secure random string for JWT authentication)
+   - `PORT` (server port, default 3000)
+   - `PUBLIC_BASE_URL` (your deployment URL)
+3. Build and start the container stack:
+   ```bash
+   docker compose up --build -d
+   ```
 
 An authorized server operator can reset any account without placing a password in shell history:
 

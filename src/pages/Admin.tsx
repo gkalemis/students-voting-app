@@ -8,6 +8,7 @@ import { BrandHeader } from '../components/BrandHeader';
 import { UserForm, LogoUpload } from '../components/AdminForms';
 import { ResetPasswordModal, DeleteUserModal } from '../components/AdminModals';
 import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
+import { getBrandingText } from '../utils/branding';
 
 export function Admin() {
   const { user: currentUser } = useAuth();
@@ -158,27 +159,51 @@ export function Admin() {
           }
         }}
       >
-        <label>
-          {t('universityName')}
-          <input
-            value={brand.university_name || ''}
-            onChange={e => setBrand({ ...brand, university_name: e.target.value })}
-          />
-        </label>
-        <label>
-          {t('schoolName')}
-          <input
-            value={brand.school_name || ''}
-            onChange={e => setBrand({ ...brand, school_name: e.target.value })}
-          />
-        </label>
-        <label style={{ gridColumn: '1 / -1' }}>
-          {t('departmentName')}
-          <input
-            value={brand.department_name || ''}
-            onChange={e => setBrand({ ...brand, department_name: e.target.value })}
-          />
-        </label>
+        {(() => {
+          const univVal = getBrandingText(brand.university_name, language);
+          const schoolVal = getBrandingText(brand.school_name, language);
+          const deptVal = getBrandingText(brand.department_name, language);
+          return (
+            <>
+              <label>
+                {t('universityName')}
+                <input
+                  value={univVal}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const cur = brand.university_name;
+                    const updated = typeof cur === 'object' && cur !== null ? { ...cur, [language]: val } : { el: val, en: val };
+                    setBrand({ ...brand, university_name: updated });
+                  }}
+                />
+              </label>
+              <label>
+                {t('schoolName')}
+                <input
+                  value={schoolVal}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const cur = brand.school_name;
+                    const updated = typeof cur === 'object' && cur !== null ? { ...cur, [language]: val } : { el: val, en: val };
+                    setBrand({ ...brand, school_name: updated });
+                  }}
+                />
+              </label>
+              <label style={{ gridColumn: '1 / -1' }}>
+                {t('departmentName')}
+                <input
+                  value={deptVal}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const cur = brand.department_name;
+                    const updated = typeof cur === 'object' && cur !== null ? { ...cur, [language]: val } : { el: val, en: val };
+                    setBrand({ ...brand, department_name: updated });
+                  }}
+                />
+              </label>
+            </>
+          );
+        })()}
         <div style={{ gridColumn: '1 / -1' }}>
           <button>{t('save')}</button>
         </div>
@@ -238,8 +263,8 @@ export function Admin() {
       )}
 
       {showResetDbModal && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" style={{ background: '#0f172a99', backdropFilter: 'blur(6px)' }}>
-          <div className="modal card" style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px', boxShadow: '0 25px 50px -12px #0f172a33' }}>
+        <div className="modal" role="dialog" aria-modal="true" onClick={() => setShowResetDbModal(false)}>
+          <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px' }}>
             <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
               <div style={{ width: '56px', height: '56px', margin: '0 auto 1rem auto', borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
                 ⚠️

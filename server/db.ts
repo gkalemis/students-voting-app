@@ -7,10 +7,16 @@ import {
 
 export const db = {
   users: [] as User[],
-  globalBranding: {
-    university_name: 'Εθνικό Μετσόβιο Πολυτεχνείο (ΕΜΠ)',
-    school_name: 'Σχολή Πολιτικών Μηχανικών',
-    department_name: 'Τομέας Μεταφορών και Συγκοινωνιακής Υποδομής',
+    globalBranding: {
+    university_name: {
+      el: 'Εθνικό Μετσόβειο Πολυτεχνείο',
+      en: 'National Technical University of Athens'
+    },
+    school_name: {
+      el: 'Σχολή Πολιτικών Μηχανικών',
+      en: 'School of Civil Engineering'
+    },
+    department_name: '',
     background_type: 'none',
     background_value: '#0e2a47',
     logo_url: null,

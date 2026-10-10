@@ -4,6 +4,7 @@ import { useT } from '../context/LocaleContext';
 import { AcademicLogo } from './AcademicLogo';
 import { VotingCountdown } from './VotingCountdown';
 import { toGreekUppercase } from '../utils/greek';
+import { getBrandingText } from '../utils/branding';
 
 interface PresentationHeaderCardProps {
   brand?: Brand;
@@ -34,36 +35,36 @@ export function PresentationHeaderCard({
   actions,
   onExpire
 }: PresentationHeaderCardProps) {
-  const { t } = useT();
+  const { t, language } = useT();
 
-  const university = brand?.university_name || t('app');
-  const school = brand?.school_name;
-  const department = brand?.department_name;
+  const university = getBrandingText(brand?.university_name, language) || t('app');
+  const school = getBrandingText(brand?.school_name, language);
+  const department = getBrandingText(brand?.department_name, language);
 
   return (
     <section className={`presentation-hero-card ${isProjector ? 'projector-hero' : ''}`}>
       {/* 1. Institution Identity Header: Logo, University, School, Department */}
-      <div className="pres-institution-banner">
+      <div className={`pres-institution-banner ${isProjector ? 'projector-institution-banner' : ''}`}>
         <AcademicLogo
           logoUrl={brand?.logo_url}
-          size={isProjector ? 76 : 56}
+          size={isProjector ? 110 : 56}
           title={university}
         />
         <div className="pres-institution-meta">
-          <div className="pres-university-title">{university}</div>
+          <div className={`pres-university-title ${isProjector ? 'projector-univ-title' : ''}`}>{university}</div>
           <div className="pres-hierarchy-badges">
             {school && (
-              <span className="pres-badge school-badge" title={school}>
+              <span className={`pres-badge school-badge ${isProjector ? 'projector-badge' : ''}`} title={school}>
                 🏛️ {school}
               </span>
             )}
             {department && (
-              <span className="pres-badge dept-badge" title={department}>
+              <span className={`pres-badge dept-badge ${isProjector ? 'projector-badge' : ''}`} title={department}>
                 📚 {department}
               </span>
             )}
             {courseName && (
-              <span className="pres-badge course-badge">
+              <span className={`pres-badge course-badge ${isProjector ? 'projector-badge' : ''}`}>
                 🎓 {courseName}{periodName ? ` · ${periodName}` : ''}{groupTitle ? ` · ${groupTitle}` : ''}
               </span>
             )}
