@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { db, userJson } from '../db';
 import { adminMiddleware } from '../middleware';
 import { User } from '../types';
+import crypto from 'crypto';
 
 export const userRouter = Router();
 
@@ -14,6 +15,9 @@ userRouter.get('/', (req, res) => {
 
 userRouter.post('/', (req, res) => {
   const { username, full_name, password, role } = req.body;
+  if (!/^[A-Za-z0-9_.-]{3,100}$/.test(username || '') || !full_name?.trim() || typeof password !== 'string' || password.length < 10) {
+    return res.status(422).json({ detail: 'Μη έγκυρα στοιχεία χρήστη ή κωδικός μικρότερος από 10 χαρακτήρες' });
+  }
   if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
     return res.status(409).json({ detail: 'Το όνομα χρήστη υπάρχει ήδη' });
   }
@@ -44,6 +48,9 @@ userRouter.patch('/:uid', (req, res) => {
     user.auth_version++;
   }
   if (req.body.password) {
+    if (typeof req.body.password !== 'string' || req.body.password.length < 10) {
+      return res.status(422).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
+    }
     user.password_hash = bcrypt.hashSync(req.body.password, 10);
     user.auth_version++;
   }
@@ -58,7 +65,8 @@ userRouter.post('/:uid/reset-password', (req, res) => {
   if (!user) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
 
   // Custom password provided or generate a strong temp password
-  const tempPassword = req.body.password?.trim() || `Temp!${Math.random().toString(36).substring(2, 7)}2025`;
+  const tempPassword = req.body.password?.trim() || `Temp!${crypto.randomBytes(12).toString('base64url')}`;
+  if (tempPassword.length < 10) return res.status(422).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
   user.password_hash = bcrypt.hashSync(tempPassword, 10);
   user.must_change_password = true;
   user.auth_version++;

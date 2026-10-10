@@ -6,22 +6,27 @@ import { authMiddleware, SECRET_KEY } from '../middleware';
 import { User } from '../types';
 
 export const authRouter = Router();
+const loginAttempts = new Map<string, number[]>();
+const dummyHash = bcrypt.hashSync('invalid-password-placeholder', 12);
+
+function allowLogin(username: string): boolean {
+  const now = Date.now();
+  const recent = (loginAttempts.get(username) || []).filter(time => now - time < 300_000);
+  if (recent.length >= 10) return false;
+  recent.push(now); loginAttempts.set(username, recent); return true;
+}
 
 authRouter.post('/login', (req, res) => {
   const { username, password } = req.body;
   const cleanUsername = (username || '').trim().toLowerCase();
+  if (!allowLogin(cleanUsername)) return res.status(429).json({ detail: 'Πάρα πολλές προσπάθειες· δοκιμάστε αργότερα' });
   const user = db.users.find(u => u.username.toLowerCase() === cleanUsername);
-  const defaultAdminPass = process.env.ADMIN_PASSWORD || 'admin';
-  const isAdminMatch = user && user.role === 'ADMIN' && (password === 'admin' || password === defaultAdminPass);
-  const isPasswordValid = user && (bcrypt.compareSync(password || '', user.password_hash) || isAdminMatch);
+  const isPasswordValid = bcrypt.compareSync(password || '', user?.password_hash || dummyHash);
 
   if (!user || !user.active || !isPasswordValid) {
     return res.status(401).json({ detail: 'Λανθασμένα στοιχεία σύνδεσης' });
   }
-
-  if (isAdminMatch && !bcrypt.compareSync(password || '', user.password_hash)) {
-    user.password_hash = bcrypt.hashSync(password, 10);
-  }
+  loginAttempts.delete(cleanUsername);
 
   const token = jwt.sign(
     { sub: String(user.id), role: user.role, ver: user.auth_version },
@@ -42,8 +47,8 @@ authRouter.get('/me', authMiddleware, (req, res) => {
 authRouter.put('/password', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
   const { current_password, new_password } = req.body;
-  if (!new_password || typeof new_password !== 'string' || new_password.length < 5) {
-    return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 5 χαρακτήρες' });
+  if (!new_password || typeof new_password !== 'string' || new_password.length < 10) {
+    return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
   }
   if (current_password) {
     if (!bcrypt.compareSync(current_password, user.password_hash)) {
@@ -69,6 +74,7 @@ authRouter.put('/password', authMiddleware, (req, res) => {
 authRouter.put('/theme', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
   const { color } = req.body;
-  user.theme_color = (color || '#0e2a47').toLowerCase();
+  if (!/^#[0-9a-f]{6}$/i.test(color || '')) return res.status(422).json({ detail: 'Μη έγκυρο χρώμα' });
+  user.theme_color = color.toLowerCase();
   res.json({ theme_color: user.theme_color });
 });

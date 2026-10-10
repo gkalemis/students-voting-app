@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config';
 import crypto from 'crypto';
 import { db, getVoteCount, calculateResults, finalizeVotes, effectiveBranding, getDefaultCriteria } from '../db';
 import { authMiddleware, adminMiddleware } from '../middleware';
@@ -161,7 +162,7 @@ sessionRouter.get('/sessions/:sid', authMiddleware, (req, res) => {
     presentations,
     criteria,
     results: s.status === 'COMPLETED' ? calculateResults(sid) : null,
-    participation_url: `/join/${s.public_id}`
+    participation_url: `${config.publicBaseUrl.replace(/\/$/, '')}/join/${s.public_id}`
   });
 });
 

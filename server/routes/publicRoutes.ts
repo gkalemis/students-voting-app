@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { config } from '../config';
 import crypto from 'crypto';
 import { db, effectiveBranding, getVoteCount, calculateResults, hashToken } from '../db';
 import { broadcastSession } from '../ws';
@@ -55,7 +56,7 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
     } : null,
     criteria: criteria.map(c => ({ id: c.id, name: c.name, weight: c.weight })),
     vote_count: currentActiveP ? getVoteCount(currentActiveP.id) : 0,
-    participation_url: `/join/${s.public_id}`,
+    participation_url: `${config.publicBaseUrl.replace(/\/$/, '')}/join/${s.public_id}`,
     branding: effectiveBranding(course),
     presentations,
     server_time: new Date().toISOString(),

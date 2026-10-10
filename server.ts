@@ -16,15 +16,14 @@ import { publicRouter } from './server/routes/publicRoutes';
 import { exportRouter } from './server/routes/exportRoutes';
 import { brandingRouter, ASSETS_DIR } from './server/routes/brandingRoutes';
 import { importRouter } from './server/routes/importRoutes';
+import { config } from './server/config';
 
-const PORT = 3000;
+const PORT = config.port;
 
 // Initialize persistence from data/db.json; seed if first run
-const loaded = initPersistence();
-if (!loaded) {
-  seedInitialData();
-  saveDatabaseSync();
-}
+initPersistence();
+seedInitialData();
+saveDatabaseSync();
 
 // Background auto-expiry ticker: automatically closes voting when time expires
 // and immediately broadcasts updates to projector, user, and lecturer screens
@@ -50,7 +49,22 @@ function checkExpiredVoting() {
 setInterval(checkExpiredVoting, 500);
 
 const app = express();
-app.use(express.json());
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use((req, res, next) => {
+  const hostname = req.hostname.toLowerCase();
+  if (config.production && !config.allowedHosts.includes(hostname)) {
+    return res.status(400).json({ detail: 'Μη έγκυρος εξυπηρετητής' });
+  }
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+  if (config.production) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+app.use(express.json({ limit: '1mb' }));
 app.use('/assets', express.static(ASSETS_DIR));
 
 // Auto-save data on modifying requests

@@ -1,65 +1,45 @@
-# Student Presentation Voting 2.4
+# Student Presentation Voting
 
-Self-hosted bilingual Greek–English classroom voting for multiple lecturers and concurrent sessions. It includes anonymous six-hour participant credentials, editable votes, weighted criteria, live presenter updates, early completion and anonymization, CSV/XLSX imports and exports, demo flags, duplication, projector mode, and global/course branding.
+Self-hosted bilingual Greek–English classroom presentation voting. Lecturers manage a period → course → group → student hierarchy, run timed voting sessions, and view results. Only administrators manage lecturer accounts.
 
-Only administrators can create or manage professor accounts. Bootstrap, new, and reset accounts must replace their temporary password under **Λογαριασμός** before using application features. Password changes and resets revoke older login tokens.
+## Production deployment
 
-## Quick start with Docker
+The application is a single Node/Express container serving the React/Vite interface and API. The included `docker-compose.yml` connects it to an existing Traefik Docker network; it does not install or modify Traefik and publishes no host port.
 
 ```bash
 cp .env.example .env
-# Replace SECRET_KEY, ADMIN_PASSWORD and PUBLIC_BASE_URL
+# Populate every value; never commit .env.
+docker compose config --quiet
 docker compose up --build -d
 ```
 
-Open the configured `PUBLIC_BASE_URL`. The bootstrap administrator is created only when the username does not exist and must replace the bootstrap password immediately. Then remove `ADMIN_PASSWORD` from the runtime environment; never commit `.env`.
+Generate `SECRET_KEY` with `openssl rand -hex 32`. `PUBLIC_BASE_URL` must be the complete HTTPS URL. `ALLOWED_HOSTS` is comma-separated and must include the public hostname and `127.0.0.1` for the container health check. All Traefik identifiers belong only in `.env`.
 
-An authorized server operator can reset any account without placing a password in shell history:
+On a fresh installation, `ADMIN_PASSWORD` creates the administrator as a temporary credential. On an installation containing the historical default administrator password, it securely replaces that password. Log in, change it immediately, then remove `ADMIN_PASSWORD` from `.env` and recreate the container.
+
+To reset an account, stop the application first so two processes cannot write the JSON data file simultaneously:
 
 ```bash
-docker compose exec backend python -m app.cli reset-password USERNAME
+docker compose stop voting-app
+docker compose run --rm voting-app npm run reset-password -- USERNAME
+docker compose up -d voting-app
 ```
 
-The random temporary password is printed once and must be delivered privately.
+The command prints a random temporary password once. The account must change it on first login, and older tokens are revoked.
 
 ## Development
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements.txt
-cd backend && ../.venv/bin/alembic upgrade head
-../.venv/bin/uvicorn app.main:app --reload
-# second terminal
-cd frontend && npm install && npm run dev
+npm install
+npm run dev
 ```
 
-The REST/OpenAPI interface is at `/docs` on the backend in development. The UI supports Greek and English on every route. The selected language is stored only in the browser, and all interface copy is maintained in `frontend/src/i18n.ts`.
+Development defaults are intentionally local-only. Production refuses to start without a long secret, administrator username, public URL, and host allowlist.
 
-## Production behind an existing Traefik
+## Security and privacy
 
-The single `compose.yaml` connects the web service to the external network named by `TRAEFIK_NETWORK`, where an already-running Traefik container discovers it through environment-driven labels. It neither creates nor modifies Traefik.
+Passwords use bcrypt. Protected routes enforce roles and ownership; participant tokens are random and vote completion removes token-linked records. Production enables a host allowlist and browser security headers. Uploaded branding is restricted to validated PNG, JPEG, or WebP files.
 
-```bash
-docker compose up --build -d
-```
+Do not publish `.env`, `data/`, exports, logs, real names, institutional assets, or infrastructure details. Review [SECURITY.md](SECURITY.md), [DEPLOYMENT.md](DEPLOYMENT.md), and [TESTING.md](TESTING.md) before classroom use.
 
-No application port is published directly on the host. All domain, network, router, entrypoint, and resolver identifiers belong only in the ignored deployment `.env`. Verify DNS before deployment.
-
-## Classroom workflow
-
-An administrator creates lecturers. Each lecturer manages their own hierarchy: academic period → course → group → students. A group has one presentation date, which its voting session uses automatically. The lecturer activates the session and opens the projector route; students scan its permanent QR URL. During voting, participant and projector screens show the student, presentation subject, and remaining time.
-
-Administrators can upload a global raster logo, choose a subtle background color, deactivate accounts, or permanently delete any account or hierarchy level. Permanent deletion cascades through everything below the selected item. Each authenticated user can select one of ten muted interface colors; this preference is stored with their account.
-
-Campus Wi-Fi client isolation and firewalls can prevent phones reaching a local host. Use a reachable private server/HTTPS or ask network administration to permit the configured port. See [DEPLOYMENT.md](DEPLOYMENT.md).
-
-## Security summary
-
-Passwords use Argon2id; authenticated APIs enforce roles and ownership; participant credentials are random and only SHA-256 hashes are stored; vote uniqueness is a database constraint; completion transactionally converts scores to anonymous records and deletes token-linked votes. Uploaded images are decoded and restricted to PNG/JPEG/WebP (SVG deliberately rejected). The app neither fingerprints devices nor uses IP addresses as voting identity.
-
-Production also uses trusted-host validation, exact CORS origins, strict browser response headers, upload expansion/dimension limits, and password-version session revocation. Review [SECURITY.md](SECURITY.md) before operation.
-
-## Open-source project
-
-Licensed under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes and [SECURITY.md](SECURITY.md) for private vulnerability reporting. Never publish real student data, production exports, `.env` files, databases, or institutional assets.
-
+Licensed under the [MIT License](LICENSE).

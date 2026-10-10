@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { db } from './db';
 import { User } from './types';
+import { config } from './config';
 
-export const SECRET_KEY = process.env.SECRET_KEY || 'students-voting-app-super-secret-key-at-least-32-chars';
+export const SECRET_KEY = config.secretKey;
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;

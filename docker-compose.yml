@@ -1,15 +1,48 @@
 services:
-  voting-app:
-    build: .
-    container_name: ntua-voting-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
-      - SECRET_KEY=ntua-voting-secret-key-production-replace-me
+  data-init:
+    image: alpine:3.24.2
+    command: ["sh", "-c", "mkdir -p /app/data/assets && chown -R 10001:10001 /app/data"]
     volumes:
       - ./data:/app/data
+    restart: "no"
+
+  voting-app:
+    build: .
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set PUBLIC_BASE_URL in .env}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - default
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - traefik.enable=${TRAEFIK_ENABLED:-false}
+      - traefik.docker.network=${TRAEFIK_NETWORK:?Set TRAEFIK_NETWORK in .env}
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.rule=Host(`${TRAEFIK_HOST:?Set TRAEFIK_HOST in .env}`)
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.entrypoints=${TRAEFIK_ENTRYPOINT:?Set TRAEFIK_ENTRYPOINT in .env}
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.tls=true
+      - traefik.http.routers.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.tls.certresolver=${TRAEFIK_CERTRESOLVER:?Set TRAEFIK_CERTRESOLVER in .env}
+      - traefik.http.services.${TRAEFIK_ROUTER_NAME:?Set TRAEFIK_ROUTER_NAME in .env}.loadbalancer.server.port=3000
+
+networks:
+  frontend:
+    external: true
+    name: ${TRAEFIK_NETWORK:?Set TRAEFIK_NETWORK in .env}

@@ -1,8 +1,24 @@
 # Project session summary
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 
 Current release candidate: 2.4.0
+
+## 2026-10-10 architecture replacement and security repair
+
+- GitHub `main` was replaced externally with a single-container Node/Express/React implementation. The running container answered its direct port health check, but the public route was unavailable because the replacement Compose file had no Traefik labels or external-network attachment.
+- Added environment-driven Traefik discovery to `docker-compose.yml`, removed direct host port publication, retained the existing external Traefik deployment, and added a non-root data initializer and container health check.
+- Moved all deployment host, network, router, entrypoint, resolver, public URL, host allowlist, bootstrap identity, and secrets into ignored `.env`; `.env.example` contains placeholders only. Added `.dockerignore` so `.env`, data, specifications, and local artifacts cannot enter image build contexts.
+- Removed the production administrator password bypass, predictable JWT fallback, and demo lecturer seed. Production now validates configuration, replaces the known historical default administrator credential, requires first-login change, uses constant-cost unknown-user checks, and rate-limits login attempts.
+- Hardened host validation, browser headers, request limits, password validation, reset generation, theme input, participant URLs, branding field assignment, and image upload MIME/signature/size handling.
+- Added an offline container account-reset command that generates a random temporary password, requires first-login replacement, and revokes existing tokens. It must run only while the application container is stopped because persistence is a single JSON file.
+- Updated GitHub Actions and Dependabot for the replacement root Node project, and rewrote deployment, architecture, testing, and security documentation to describe the current application rather than the retired FastAPI/nginx implementation.
+- Source-only validation: `docker compose config --quiet` passed with generated neutral placeholders and `git diff --check` passed after the repair. Local npm installation could not complete because this environment has no dependency-network access. The Docker build was attempted but blocked before compilation because the sandbox cannot write Docker Buildx state under the host home directory; operator build/runtime checks remain pending.
+- Existing ignored `data/db.json` was inspected read-only: it contains an administrator and untouched demo lecturer but no classroom hierarchy or voting records. Startup remediation preserves the administrator and removes only an untouched, data-free demo lecturer.
+- Existing untracked `backend/` is residue from the retired implementation and has not been deleted because deletion requires explicit confirmation.
+- Operator-side production image build completed successfully on 2026-10-10, including TypeScript and Vite compilation. A pre-deployment data backup was created at `backups/pre-hardened-deploy-20261010-132712/` and excluded from Git and Docker build contexts. Container recreation was blocked because this Codex process still lacks Docker socket access; the running service was not changed.
+- The operator subsequently recreated the production stack from the hardened image without deleting persistent data. `voting-app` reached `healthy`, loaded `/app/data/db.json`, and started normally. Public `/api/health` returned `{"status":"ok","version":"2.4.0"}` through HTTPS/Traefik. The homepage returned HTTP/2 200 with CSP, HSTS, nosniff, DENY framing, referrer, and permissions headers. Docker inspection confirmed `3000/tcp` has no host binding and the service is attached to both its private default network and the external Traefik network.
+- Unified the first-login password-change presentation with the normal gear → Account screen. Mandatory password replacement and navigation restrictions remain enforced; only the special first-login heading and explanatory paragraph were removed.
 
 ## Completed
 

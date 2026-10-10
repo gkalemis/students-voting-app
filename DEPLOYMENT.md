@@ -2,34 +2,46 @@
 
 ## Preconditions
 
-- DNS for the private `TRAEFIK_HOST` value verified against the deployment host.
-- Existing Traefik with the configured entrypoint, Docker discovery, certificate resolver, and external network.
-- Unique `SECRET_KEY` and bootstrap password in an untracked `.env`.
-- Protected database/asset backup destination and tested restore procedure.
+- DNS resolves to the deployment host.
+- An existing Traefik container has Docker discovery, HTTPS entrypoint, certificate resolver, and an external Docker network.
+- `.env` contains unique secrets and deployment-specific identifiers.
+- `data/` has a protected, tested backup.
 
-Do not start the stack until DNS is verified.
+The Compose stack does not create or change Traefik. It attaches only `voting-app` to Traefik's external network and does not expose port 3000 on the host.
 
-## Docker deployment
+## Environment
 
-Copy `.env.example`, generate secrets, and run `docker compose up --build -d` only after DNS is ready. Database/assets persist in `voting-data`; the web service is reachable only through the existing Traefik container.
+Copy `.env.example` to `.env` and populate every field. Keep `.env` mode `0600` and never commit it.
 
-The one-shot `data-init` service creates the asset directory and assigns the persistent volume to backend UID `10001`. It must complete successfully before the non-root backend starts. Seeing `data-init` in an exited-success state is expected.
+- `SECRET_KEY`: output of `openssl rand -hex 32` or stronger.
+- `ADMIN_USERNAME`: initial administrator username.
+- `ADMIN_PASSWORD`: strong temporary bootstrap/recovery password; remove after it is changed.
+- `PUBLIC_BASE_URL`: full externally reachable HTTPS origin, without a trailing slash.
+- `ALLOWED_HOSTS`: comma-separated public hostname plus `127.0.0.1` for health checks.
+- `TRAEFIK_*`: values matching the existing Traefik installation.
 
-Container base images are pinned to explicit supported patch/distribution tags. Dependabot monitors them; review and test updates rather than switching to floating `latest` tags.
+Validate without printing expanded secrets:
 
-## Traefik/private HTTPS
+```bash
+chmod 600 .env
+docker compose config --quiet
+docker network inspect "$(sed -n 's/^TRAEFIK_NETWORK=//p' .env)" >/dev/null
+```
 
-Set `PUBLIC_BASE_URL`, exact `ALLOWED_ORIGINS`, `ALLOWED_HOSTS`, `TRAEFIK_HOST`, `TRAEFIK_NETWORK`, `TRAEFIK_ROUTER_NAME`, `TRAEFIK_ENTRYPOINT`, and `TRAEFIK_CERTRESOLVER` only in the ignored deployment `.env`. The single `compose.yaml` consumes these values without revealing infrastructure metadata. It does not create or modify Traefik, and neither service publishes a host port.
+## Start and verify
 
-Verify DNS through multiple public resolvers and confirm that the configured external network exists. For development without Traefik, use the backend and Vite commands in `README.md`.
+Back up `data/`, then:
 
-## Updates and backup
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs --no-color --tail=100 voting-app
+```
 
-Back up first, then `docker compose build --pull && docker compose up -d`; the backend runs `alembic upgrade head`. For backup, stop briefly and archive the named volume. Restore the database and asset directory together. Missing assets degrade to the neutral interface.
+Verify the configured public `/api/health`, UI, TLS certificate, HSTS and Content Security Policy. Test login, first-password change, WebSockets, QR participation, voting, and persistence across a controlled restart.
 
-Troubleshooting: confirm `.env` values, `docker compose logs`, health status, phone-to-host routing, campus client isolation, firewall port, HTTPS mixed-content rules, and proxy WebSocket forwarding.
+`data-init` exiting with code 0 is expected. It prepares the bind-mounted data directory for the non-root application UID. Do not run multiple application or CLI writers against `data/db.json` concurrently.
 
-After bootstrap, replace the temporary administrator password, remove `ADMIN_PASSWORD` from `.env`, and recreate the backend. Validate HTTPS, headers, WebSockets, QR reachability, backup, and restore before classroom use.
+## Backup and update
 
-Confirm that public HTTPS responses include `Strict-Transport-Security: max-age=31536000; includeSubDomains`. HSTS preload is intentionally not enabled.
-
+Stop the application briefly and archive the entire `data/` directory, including assets. Restore it as one unit. Before an update, test the backup, pull the reviewed commit, build, and recreate the service. Do not use floating image tags or automatic unattended application updates.

@@ -1,26 +1,21 @@
 # Architecture
 
-The React/Vite SPA is served by nginx, which proxies REST, WebSocket, and asset traffic to FastAPI. SQLAlchemy uses a normalized SQLite database with foreign keys, WAL mode and a 30-second busy timeout. Alembic owns schema evolution. Persistent `/data` contains the database and validated branding assets.
+The current application is a React/Vite SPA and Express API in one Node process and container. Express serves the compiled frontend, REST API, WebSocket endpoint, and validated branding assets on port 3000. An existing Traefik instance terminates HTTPS and discovers the service through Compose labels.
 
-## Data and authorization
+## Persistence and ownership
 
-Lecturers own a strict period → course → group → students hierarchy plus its sessions. Each group carries its common presentation date. Every protected lookup applies owner-or-admin authorization, returning 404 to lecturers for foreign resources. Administrator deletion explicitly traverses and removes subordinate voting records in foreign-key-safe order. A session has stable presentations, ordered criteria, tokens, votes/scores, anonymous scores, and presenter edit events.
+Application state is persisted atomically to the bind-mounted `data/db.json`; uploaded assets live below `data/assets`. The hierarchy is period → course → group → students, and records carry owner IDs. Administrators manage lecturer accounts and all data; lecturers manage their own hierarchy and sessions.
 
-JWTs contain a per-user authentication version. Password changes and resets increment it, invalidating older tokens. New/bootstrap/reset accounts carry `must_change_password`; only identity inspection and password replacement remain available until it is cleared. Only administrators create accounts; server operators can invoke identical reset semantics through the container CLI.
+Because persistence is one JSON file, exactly one application or maintenance writer may run at a time. This design is appropriate only for the current small installation. PostgreSQL transactions, schema migrations, and shared real-time/rate-limit coordination are required before horizontal scaling or materially larger use.
 
-Session state flows `DRAFT → ACTIVE → COMPLETED → ARCHIVED`; presentation state flows `PENDING → VOTING_OPEN → EVALUATED|NO_VOTES`, with reversible `PENDING ↔ SKIPPED` before completion. Only one open presentation is permitted per session, while session-scoped queries/channels allow independent concurrent sessions.
+## Authentication and voting
 
-## Tokens, voting and anonymity
+Passwords are bcrypt hashes. JWTs contain an authentication version; password changes and resets increment it to revoke existing tokens. New, bootstrap, and reset accounts must change their temporary password before normal application use. There is no production password bypass.
 
-A browser stores `{token, expires_at}` under a session-specific localStorage key. Issuance never extends an existing credential and expiry is fixed at six hours. Admission locking blocks issuance only. A scheduler removes expired credentials every 15 minutes by default. Server time and state are authoritative. The unique `(presentation_id, token_id)` constraint makes edits an upsert rather than an additional vote.
+Participant credentials are random and session-scoped. Votes are editable during the open window. Completion converts voting records to anonymous score rows and removes token-linked votes. WebSocket events prompt clients to refresh authoritative state.
 
-Completion closes the window, marks remaining presenters skipped, copies each vote's criterion records under a new random anonymous vote ID, deletes token-linked votes, deletes session tokens, and commits together. Anonymous records intentionally omit timestamps, network information and browser identifiers while retaining enough grouping for reproducible aggregates.
+## Security boundaries
 
-## Realtime and branding
+Production configuration is read from ignored `.env` values and validated at startup. Express enforces a host allowlist, request-size limit, role middleware, security headers, and production HSTS. Branding uploads use size, MIME, and file-signature checks and randomized filenames. The container runs as UID 10001 with `no-new-privileges`; no application port is published directly.
 
-Each public session ID has an isolated WebSocket connection set. Messages contain event types only; clients refetch authoritative state after every message or reconnect. This avoids exposing administrative data and preserves form component state when presenter labels change. Global branding is the default; non-empty course fields overlay it. QR codes always render in a separate solid-white container.
-
-SQLite is appropriate for the expected six lecturers/roughly 90 students, but serializes writes. For materially larger workloads, change `DATABASE_URL` to PostgreSQL, add its driver, run migrations, and use a shared pub/sub broker if multiple backend processes are introduced.
-
-Security boundaries include nginx request limits and headers, exact origin/host checks, Pydantic validation, ORM parameterization, randomized decoded raster assets, XLSX expansion limits, and credential-scoped throttles. In-memory throttles and WebSockets must move to shared infrastructure before horizontal scaling.
-
+The Docker socket is not mounted into the application. Traefik configuration remains owned by the existing reverse-proxy deployment.

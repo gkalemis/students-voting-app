@@ -36,8 +36,7 @@ export function Account() {
   return (
     <Layout>
       <section className="card login" style={{ margin: 'auto' }}>
-        <h1>{user?.must_change_password ? t('mandatoryPassword') : t('changePassword')}</h1>
-        {user?.must_change_password && <p>{t('temporaryReplace')}</p>}
+        <h1>{t('changePassword')}</h1>
 
         <form onSubmit={submit}>
           <label>

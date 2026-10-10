@@ -1,4 +1,6 @@
 node_modules/
+/backend/
+/backups/
 dist/
 dist-server/
 .env

@@ -1,20 +1,31 @@
 # Testing
 
+## Automated checks
+
 ```bash
-cd backend && ../.venv/bin/pytest -q
-cd frontend && npm test
-cd frontend && npm run build
-docker compose config
-docker compose up --build -d
+npm install
+npm run lint
+npm run build
+docker compose config --quiet
 ```
 
-`docker compose config` does not require the external network to exist, but it does require non-secret placeholder values for every mandatory deployment variable. Starting production requires the configured external network and must wait for verified DNS.
+GitHub Actions runs these checks for pushes and pull requests. Dependabot monitors root npm, Docker, and workflow dependencies. A committed lockfile is still required before changing installation commands to `npm ci`.
 
-Backend tests cover authentication/ownership, first-login replacement, administrator-only account creation, hierarchical cascade removal, password changes, lifecycle, issuance/locking, vote uniqueness, anonymization, calculations, live edits, session isolation, duplication, and uploads. Frontend tests cover rating preservation, matching Greek/English catalog keys, translated API errors, responsive behavior, and the static asset namespace. Manual E2E should include migration `0003`, period/course/group/student creation, the shared group date, all cascade levels, logo/background/theme persistence, countdown behavior, reset-token revocation, two browser profiles, completion, reveal, and exports.
+## Container smoke test
 
-Deterministic fixtures use an isolated SQLite database. Do not point tests at production. SQLite concurrency is covered by constraints and transactional behavior; it is not a substitute for capacity testing on deployment hardware.
+Use synthetic data and a non-production environment. After a successful build, confirm the health endpoint, startup logs, non-root user, lack of a published host port, Traefik network attachment, and persistence across restart.
 
-Before release, also perform secret and dependency scans, container vulnerability scanning, migration from a copy of the previous schema, CLI reset testing, malicious upload cases, security-header inspection, and backup restoration. Record real results and never report blocked checks as passed.
+## Manual acceptance
 
-Responsive checks cover widths 320, 375, 430, 768, 820, and 1024 pixels in portrait and representative landscape orientations. Verify no page-level horizontal scrolling, 44-pixel touch targets, keyboard focus, rating selection, dialogs, navigation, result tables, and projector QR scanning on physical phones/tablets where possible.
+Test both languages and widths 320, 375, 430, 768, 820, and 1024 pixels. Cover:
 
+- bootstrap login and mandatory password change;
+- administrator lecturer creation, reset, deactivation, and deletion;
+- lecturer ownership and period → course → group → student operations;
+- session activation, QR admission, voting edits, countdown, auto-close, and completion;
+- two independent browser profiles and concurrent sessions;
+- logo upload rejection/acceptance and persistence;
+- direct-host rejection, HTTPS headers, WebSockets, and logout/token revocation;
+- backup and restore of the complete `data/` directory.
+
+Do not claim a check passed when it was blocked. Never run destructive or load tests against real classroom data.

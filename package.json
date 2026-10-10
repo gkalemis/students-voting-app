@@ -7,6 +7,7 @@
     "dev": "tsx server.ts",
     "build": "tsc -b && vite build",
     "lint": "tsc --noEmit",
+    "reset-password": "tsx server/cli.ts reset-password",
     "start": "node server.ts",
     "serve": "tsx server.ts",
     "preview": "vite preview --port 3000 --host 0.0.0.0"

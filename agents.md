@@ -15,7 +15,7 @@
 - Decompose complex backend routes into dedicated routers (e.g., `sessionRoutes.ts`, `presentationRoutes.ts`, `publicRoutes.ts`, `exportRoutes.ts`).
 
 ## 4. GitHub Pull & Production Server Compatibility
-- The application must run reliably when pulled from GitHub (`git pull`) on the production server (hosted at `https://ntua-civil-voting.kfm.gr`).
+- The application must run reliably when pulled from GitHub (`git pull`) on the production server configured through the ignored `.env` file.
 - **Data Persistence**:
   - Database records are persisted in `data/db.json` with atomic writes.
   - Uploaded logos and backgrounds are stored in `data/assets/`.

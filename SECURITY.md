@@ -16,7 +16,7 @@ Operators must generate unique secrets, use HTTPS, remove bootstrap credentials 
 
 The web service emits a one-year HSTS policy with `includeSubDomains` after HTTPS termination at the reverse proxy. The preload directive is intentionally omitted; operators must not enable preload without reviewing every subdomain and accepting its long-lived consequences.
 
-Temporary-password accounts are restricted until replacement. Password change/reset revokes existing JWTs. Only administrators create professors; authorized server operators may use the container reset command. Email recovery is not implemented.
+Temporary-password accounts are restricted until replacement. Password change/reset revokes existing JWTs. Only administrators create professors; authorized server operators may use the offline container reset command while the application is stopped. Email recovery is not implemented.
 
 ## Data handling
 
@@ -24,5 +24,5 @@ Never publish real names, exports, databases, branding assets, logs, tokens, or 
 
 ## Known boundaries
 
-Bearer tokens use browser local storage, making Content Security Policy and dependency integrity important. Login/vote throttles and WebSocket state are process-local; horizontal deployments require shared coordination. SQLite targets the documented small deployment. See `TODO.md`.
+Bearer tokens use browser local storage, making Content Security Policy and dependency integrity important. Login throttles and WebSocket state are process-local. The JSON persistence layer permits only one writer and targets the documented small deployment; horizontal deployments require a transactional database and shared coordination. See `TODO.md`.
 
