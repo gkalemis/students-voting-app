@@ -18,4 +18,4 @@ export async function api(path:string, options:RequestInit={}){
 }
 export const json=(method:string,body?:unknown):RequestInit=>({method,body:body===undefined?undefined:JSON.stringify(body)});
 export function connect(publicId:string,onUpdate:()=>void){let socket:WebSocket,stopped=false,retry=1000;
- const open=()=>{const proto=location.protocol==='https:'?'wss':'ws';socket=new WebSocket(`${proto}://${location.host}/api/ws/${publicId}`);socket.onmessage=onUpdate;socket.onerror=()=>{};socket.onopen=()=>retry=1000;socket.onclose=()=>{if(!stopped)setTimeout(open,retry=Math.min(retry*2,10000))}};open();return()=>{stopped=true;socket?.close()}}
+ const open=()=>{const proto=location.protocol==='https:'?'wss':'ws';socket=new WebSocket(`${proto}://${location.host}/api/ws/${publicId}`);socket.onmessage=onUpdate;socket.onerror=()=>{};socket.onopen=()=>{retry=1000;onUpdate();};socket.onclose=()=>{if(!stopped)setTimeout(open,retry=Math.min(retry*2,10000))}};open();return()=>{stopped=true;socket?.close()}}

@@ -5,7 +5,7 @@ import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
 import { BrandHeader } from '../components/BrandHeader';
-import { UserForm, LogoUpload, BackgroundPalette } from '../components/AdminForms';
+import { UserForm, LogoUpload } from '../components/AdminForms';
 import { ResetPasswordModal, DeleteUserModal } from '../components/AdminModals';
 import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
 
@@ -17,9 +17,22 @@ export function Admin() {
   const [showAdd, setShowAdd] = useState(false);
   const [resetTarget, setResetTarget] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [showResetDbModal, setShowResetDbModal] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  async function handleResetDb() {
+    setError('');
+    try {
+      await api('/admin/reset-db', json('POST', {}));
+      setMessage(t('resetDatabaseSuccess'));
+      setShowResetDbModal(false);
+      load();
+    } catch (e) {
+      setError(translateError(e, language));
+    }
+  }
 
   const load = () => {
     api('/users').then(setUsers).catch(e => setError(translateError(e, language)));
@@ -131,7 +144,6 @@ export function Admin() {
         saved={x => { setBrand(x); setMessage(t('logoUploaded')); }}
         failed={e => setError(translateError(e, language))}
       />
-      <BackgroundPalette brand={brand} setBrand={setBrand} />
 
       <form
         className="card form-grid"
@@ -175,6 +187,26 @@ export function Admin() {
         </div>
       </form>
 
+      <section style={{ margin: '2.5rem 0', padding: '1.75rem', background: '#fff', border: '1px solid #fecaca', borderRadius: '14px', boxShadow: '0 4px 12px #dc26260a' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#dc2626' }}>⚠️</div>
+          <div>
+            <h2 style={{ color: '#991b1b', margin: 0, fontSize: '1.15rem' }}>{t('resetDatabase')}</h2>
+            <p style={{ color: '#64748b', fontSize: '0.85rem', margin: 0 }}>{t('resetDatabasePrompt')}</p>
+          </div>
+        </div>
+        <div style={{ marginTop: '1.25rem' }}>
+          <button
+            type="button"
+            className="danger"
+            onClick={() => setShowResetDbModal(true)}
+            style={{ padding: '0.65rem 1.25rem', fontWeight: 700 }}
+          >
+            🗑️ {t('resetDatabase')}
+          </button>
+        </div>
+      </section>
+
       {showAdd && (
         <UserForm
           close={() => setShowAdd(false)}
@@ -203,6 +235,34 @@ export function Admin() {
           confirmDelete={handleDeleteUser}
           busy={busyDelete}
         />
+      )}
+
+      {showResetDbModal && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" style={{ background: '#0f172a99', backdropFilter: 'blur(6px)' }}>
+          <div className="modal card" style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px', boxShadow: '0 25px 50px -12px #0f172a33' }}>
+            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ width: '56px', height: '56px', margin: '0 auto 1rem auto', borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
+                ⚠️
+              </div>
+              <h3 style={{ color: '#991b1b', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.5rem 0' }}>{t('resetDatabase')}</h3>
+              <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.5', margin: 0 }}>
+                {t('confirmResetDb')}
+              </p>
+            </div>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.5rem', color: '#b45309', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: '0.5rem', textAlign: 'left' }}>
+              <span>⚠️</span>
+              <span>{t('resetDatabasePrompt')}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button type="button" className="secondary" onClick={() => setShowResetDbModal(false)} style={{ padding: '0.6rem 1.2rem' }}>
+                {t('cancel')}
+              </button>
+              <button type="button" className="danger" onClick={handleResetDb} style={{ padding: '0.6rem 1.4rem', fontWeight: 700 }}>
+                🗑️ {t('resetDatabase')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );

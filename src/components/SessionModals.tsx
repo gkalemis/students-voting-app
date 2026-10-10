@@ -171,54 +171,7 @@ export function CompleteModal({
   );
 }
 
-export function StudentDemoModal({
-  publicId,
-  close
-}: {
-  publicId: string;
-  close: () => void;
-}) {
-  const { t } = useT();
-  const demoUrl = `${window.location.origin}/join/${publicId}`;
 
-  return (
-    <div className="modal" role="dialog" aria-modal="true" onClick={close}>
-      <div className="student-demo-modal-dialog" onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="demo-badge">LIVE DEMO</span>
-            <b style={{ color: '#0f172a' }}>{t('studentVoteDemo')}</b>
-          </div>
-          <button
-            type="button"
-            className="secondary"
-            onClick={close}
-            style={{ padding: '0.2rem 0.5rem', minHeight: 'auto', borderRadius: '6px' }}
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="student-phone-mockup-wrapper">
-          <div className="student-phone-mockup">
-            <div className="phone-screen-speaker" />
-            <iframe
-              src={demoUrl}
-              title="Student Vote Demo"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-          <small style={{ color: '#64748b' }}>
-            {t('studentVoteDemoHint')}
-          </small>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export async function downloadAuth(e: React.MouseEvent<HTMLAnchorElement>) {
   e.preventDefault();

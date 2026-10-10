@@ -1,6 +1,8 @@
 import React from 'react';
 import { State } from '../types';
 import { useT } from '../context/LocaleContext';
+import { translateStatus } from '../i18n';
+import { toGreekUppercase } from '../utils/greek';
 
 export function WaitingQueue({ s }: { s: State }) {
   const { t } = useT();
@@ -57,8 +59,8 @@ export function WaitingQueue({ s }: { s: State }) {
                     </div>
                   )}
                 </div>
-                <span className={`pill ${p.status.toLowerCase()}`}>
-                  {p.status}
+                <span className={`pill ${p.status.toLowerCase()}`} lang="el">
+                  {toGreekUppercase(translateStatus(p.status, t))}
                 </span>
               </div>
             ))}

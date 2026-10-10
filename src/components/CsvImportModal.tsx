@@ -65,10 +65,10 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
 
   const preview = parsePreview(csvText);
 
-  const sampleHierarchy = '\ufeffΠερίοδος,Μάθημα,Ομάδα,Φοιτητής,Θέμα\n' +
-    'Χειμερινό 2024-2025,Συγκοινωνιακά Έργα,Ομάδα 1,Γεώργιος Παπαδόπουλος,Σχεδιασμός Κυκλικού Κόμβου\n' +
-    'Χειμερινό 2024-2025,Συγκοινωνιακά Έργα,Ομάδα 1,Μαρία Ιωάννου,Αξιολόγηση Οδικής Ασφάλειας\n' +
-    'Χειμερινό 2024-2025,Οδοποιία Ι,Ομάδα Α,Νικόλαος Γεωργίου,Μέθοδοι Χάραξης Οδού\n';
+  const sampleHierarchy = '\ufeffΜάθημα,Περίοδος,Ομάδα,Φοιτητής,Θέμα\n' +
+    'Συγκοινωνιακά Έργα,Χειμερινό 2024-2025,Ομάδα 1,Γεώργιος Παπαδόπουλος,Σχεδιασμός Κυκλικού Κόμβου\n' +
+    'Συγκοινωνιακά Έργα,Χειμερινό 2024-2025,Ομάδα 1,Μαρία Ιωάννου,Αξιολόγηση Οδικής Ασφάλειας\n' +
+    'Οδοποιία Ι,Χειμερινό 2024-2025,Ομάδα Α,Νικόλαος Γεωργίου,Μέθοδοι Χάραξης Οδού\n';
 
   const sampleStudents = '\ufeffΦοιτητής,Θέμα\n' +
     'Γεώργιος Παπαδόπουλος,Σχεδιασμός Κυκλικού Κόμβου\n' +
@@ -115,7 +115,7 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
       if (mode === 'hierarchy') {
         const res = await api('/import/hierarchy', json('POST', { csvText }));
         const s = res.summary;
-        const msg = `${t('csvSuccessSummary')} (${s.periods_created} ${t('periods')}, ${s.courses_created} ${t('courses')}, ${s.groups_created} ${t('groups')}, ${s.students_created} ${t('students')})`;
+        const msg = `${t('csvSuccessSummary')} (${s.courses_created} ${t('courses')}, ${s.periods_created} ${t('periods')}, ${s.groups_created} ${t('groups')}, ${s.students_created} ${t('students')})`;
         setResultMsg(msg);
       } else {
         const targetGid = activeSelectedGroup || String(groups[0]?.id || '');
@@ -218,8 +218,8 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
             <div className="csv-column-chips" lang="el">
               {mode === 'hierarchy' ? (
                 <>
-                  <span className="csv-col-tag required" lang="el">{language === 'el' ? 'Περίοδος' : 'Period'}</span>
                   <span className="csv-col-tag required" lang="el">{language === 'el' ? 'Μάθημα' : 'Course'}</span>
+                  <span className="csv-col-tag required" lang="el">{language === 'el' ? 'Περίοδος' : 'Period'}</span>
                   <span className="csv-col-tag required" lang="el">{language === 'el' ? 'Ομάδα' : 'Group'}</span>
                   <span className="csv-col-tag required" lang="el">{language === 'el' ? 'Φοιτητής' : 'Student'}</span>
                   <span className="csv-col-tag optional" lang="el">{language === 'el' ? 'Θέμα (προαιρετικό)' : 'Topic (optional)'}</span>

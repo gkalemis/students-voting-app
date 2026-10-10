@@ -55,7 +55,7 @@ export function ResourceForm({
     setBusy(true);
     try {
       if (kind === 'course') {
-        await api('/courses', json('POST', { name, description: description || null, period_id: Number(periodId) }));
+        await api('/courses', json('POST', { name, description: description || null }));
       }
       if (kind === 'period') {
         await api('/periods', json('POST', { name }));
@@ -106,11 +106,22 @@ export function ResourceForm({
             <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={3000} />
           </label>
         )}
-        {(kind === 'course' || kind === 'group' || kind === 'session') && (
+        {(kind === 'group' || kind === 'session') && (
           <label>
-            {t('period')}
-            <select value={periodId} onChange={e => setPeriod(e.target.value)} required>
-              {periods.map(x => (
+            {t('course')}
+            <select
+              value={courseId}
+              onChange={e => {
+                const newCid = e.target.value;
+                setCourse(newCid);
+                const c = courses.find(x => String(x.id) === newCid);
+                if (c && c.period_id) {
+                  setPeriod(String(c.period_id));
+                }
+              }}
+              required
+            >
+              {courses.map(x => (
                 <option value={x.id} key={x.id}>{x.name}</option>
               ))}
             </select>
@@ -118,9 +129,9 @@ export function ResourceForm({
         )}
         {(kind === 'group' || kind === 'session') && (
           <label>
-            {t('course')}
-            <select value={courseId} onChange={e => setCourse(e.target.value)} required>
-              {courses.filter(x => String(x.period_id) === periodId).map(x => (
+            {t('period')}
+            <select value={periodId} onChange={e => setPeriod(e.target.value)} required>
+              {periods.map(x => (
                 <option value={x.id} key={x.id}>{x.name}</option>
               ))}
             </select>

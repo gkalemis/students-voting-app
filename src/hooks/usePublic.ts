@@ -18,8 +18,26 @@ export function usePublic(publicId: string): [State | null, () => void] {
     const cleanup = connect(publicId, () => {
       load();
     });
-    return cleanup;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        load();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cleanup();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [publicId, load]);
+
+  // Secondary backup polling every 2s while a presentation is voting to ensure immediate sync on expiration
+  useEffect(() => {
+    if (!publicId || !state?.active_presentation) return;
+    const timer = setInterval(() => {
+      load();
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [publicId, state?.active_presentation?.id, load]);
 
   return [state, load];
 }

@@ -32,7 +32,7 @@ export interface Course {
   name: string;
   description?: string | null;
   owner_id: number;
-  period_id: number;
+  period_id?: number | null;
   branding?: Partial<Branding>;
 }
 

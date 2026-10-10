@@ -89,6 +89,7 @@ export function Join() {
             <PresentationHeaderCard
               brand={s.branding}
               courseName={s.course}
+              periodName={s.period}
               groupTitle={s.group}
               presenterName={s.active_presentation.presenter_name}
               presentationTitle={s.active_presentation.title}

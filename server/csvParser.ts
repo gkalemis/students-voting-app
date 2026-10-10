@@ -1,6 +1,6 @@
 export interface CsvRow {
-  period?: string;
   course?: string;
+  period?: string;
   group?: string;
   full_name?: string;
   presentation_title?: string;
@@ -80,11 +80,11 @@ export function extractRows(matrix: string[][], mode: 'hierarchy' | 'students'):
       headerMap = { 0: 'full_name', 1: 'presentation_title' };
     } else {
       if (firstRow.length >= 5) {
-        headerMap = { 0: 'period', 1: 'course', 2: 'group', 3: 'full_name', 4: 'presentation_title' };
+        headerMap = { 0: 'course', 1: 'period', 2: 'group', 3: 'full_name', 4: 'presentation_title' };
       } else if (firstRow.length === 4) {
-        headerMap = { 0: 'period', 1: 'course', 2: 'group', 3: 'full_name' };
+        headerMap = { 0: 'course', 1: 'period', 2: 'group', 3: 'full_name' };
       } else if (firstRow.length === 3) {
-        headerMap = { 0: 'period', 1: 'course', 2: 'group' };
+        headerMap = { 0: 'course', 1: 'period', 2: 'group' };
       } else {
         headerMap = { 0: 'full_name', 1: 'presentation_title' };
       }

@@ -8,6 +8,7 @@ import { toGreekUppercase } from '../utils/greek';
 interface PresentationHeaderCardProps {
   brand?: Brand;
   courseName?: string;
+  periodName?: string;
   groupTitle?: string;
   presenterName: string;
   presentationTitle?: string | null;
@@ -22,6 +23,7 @@ interface PresentationHeaderCardProps {
 export function PresentationHeaderCard({
   brand,
   courseName,
+  periodName,
   groupTitle,
   presenterName,
   presentationTitle,
@@ -62,7 +64,7 @@ export function PresentationHeaderCard({
             )}
             {courseName && (
               <span className="pres-badge course-badge">
-                🎓 {courseName}{groupTitle ? ` · ${groupTitle}` : ''}
+                🎓 {courseName}{periodName ? ` · ${periodName}` : ''}{groupTitle ? ` · ${groupTitle}` : ''}
               </span>
             )}
           </div>

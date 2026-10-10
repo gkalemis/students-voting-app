@@ -12,7 +12,7 @@ import { ResultsTable } from '../components/ResultsTable';
 export function Projector() {
   const { publicId = '' } = useParams();
   const { t } = useT();
-  const [s] = usePublic(publicId);
+  const [s, load] = usePublic(publicId);
 
   if (!s) return <>{t('loading')}</>;
 
@@ -28,6 +28,7 @@ export function Projector() {
               <PresentationHeaderCard
                 brand={s.branding}
                 courseName={s.course}
+                periodName={s.period}
                 groupTitle={s.group}
                 presenterName={s.active_presentation.presenter_name}
                 presentationTitle={s.active_presentation.title}
@@ -35,12 +36,13 @@ export function Projector() {
                 voteCount={s.vote_count}
                 categories={s.criteria}
                 isProjector={true}
+                onExpire={load}
               />
             ) : s.results_revealed ? (
               <div className="card projector-results-card">
                 <BrandHeader brand={s.branding} />
                 <p className="projector-context-tag">
-                  {s.period} · {s.course} · {s.group}
+                  {s.course} · {s.period} · {s.group}
                 </p>
                 <ResultsTable rows={s.results} />
               </div>
@@ -48,7 +50,7 @@ export function Projector() {
               <div className="card projector-idle-card">
                 <BrandHeader brand={s.branding} />
                 <p className="projector-context-tag">
-                  {s.period} · {s.course} · {s.group}
+                  {s.course} · {s.period} · {s.group}
                 </p>
                 <h1 className="projector-status-heading">
                   {s.status === 'COMPLETED' ? t('sessionCompleted') : t('waitingPresentation')}

@@ -9,6 +9,7 @@ export const sessionRouter = Router();
 
 // Sessions List & Create
 sessionRouter.get('/sessions', authMiddleware, (req, res) => {
+  db.sessions.forEach(s => cleanupGhostPresentations(s.id));
   res.json(db.sessions.map(s => ({
     id: s.id,
     public_id: s.public_id,
@@ -73,9 +74,47 @@ sessionRouter.post('/sessions', authMiddleware, (req, res) => {
   res.status(201).json({ id: s.id, public_id: s.public_id });
 });
 
+export function cleanupGhostPresentations(sessionId: number) {
+  const session = db.sessions.find(s => s.id === sessionId);
+  const presentations = db.presentations.filter(p => p.session_id === sessionId);
+  
+  const ghostPres = presentations.filter(p => {
+    if (p.student_id != null && !db.students.some(st => st.id === p.student_id)) {
+      return true;
+    }
+    const presenterName = (p.presenter_name || '').trim().toLowerCase();
+    if (!presenterName) return true;
+
+    if (session && session.group_id) {
+      const groupStudents = db.students.filter(st => st.group_id === session.group_id);
+      const matchesGroup = groupStudents.some(st => st.full_name.trim().toLowerCase() === presenterName);
+      if (!matchesGroup) return true;
+    } else {
+      const matchesAny = db.students.some(st => st.full_name.trim().toLowerCase() === presenterName);
+      if (!matchesAny) return true;
+    }
+
+    return false;
+  });
+
+  if (ghostPres.length > 0) {
+    const ghostIds = ghostPres.map(p => p.id);
+    db.votes = db.votes.filter(v => !ghostIds.includes(v.presentation_id));
+    db.anonymousVoteScores = db.anonymousVoteScores.filter(v => !ghostIds.includes(v.presentation_id));
+    db.presentations = db.presentations.filter(p => !ghostIds.includes(p.id));
+    const remaining = db.presentations
+      .filter(p => p.session_id === sessionId)
+      .sort((a, b) => a.position - b.position);
+    remaining.forEach((p, idx) => {
+      p.position = idx;
+    });
+  }
+}
+
 // Session Detail
 sessionRouter.get('/sessions/:sid', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
+  cleanupGhostPresentations(sid);
   const s = db.sessions.find(x => x.id === sid);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
-import { translateError } from '../i18n';
+import { translateError, translateStatus } from '../i18n';
+import { toGreekUppercase } from '../utils/greek';
 
 export function AdminRemovalPanel({
   users: _users, reloadUsers: _reloadUsers
@@ -13,6 +14,7 @@ export function AdminRemovalPanel({
   const [courses, setCourses] = useState<any[]>([]);
   const [periods, setPeriods] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [confirmModal, setConfirmModal] = useState<{ path: string; label: string; verb: 'delete' | 'archive' } | null>(null);
   const [busyAction, setBusyAction] = useState(false);
@@ -20,8 +22,8 @@ export function AdminRemovalPanel({
   const [error, setError] = useState('');
 
   const load = () =>
-    Promise.all([api('/courses'), api('/periods'), api('/groups'), api('/sessions')])
-      .then(([a, b, c, d]) => { setCourses(a); setPeriods(b); setGroups(c); setSessions(d); })
+    Promise.all([api('/courses'), api('/periods'), api('/groups'), api('/groups/students'), api('/sessions')])
+      .then(([a, b, c, s, d]) => { setCourses(a); setPeriods(b); setGroups(c); setStudents(s); setSessions(d); })
       .catch(e => setError(translateError(e, language)));
 
   useEffect(() => { load(); }, [language]);
@@ -75,6 +77,7 @@ export function AdminRemovalPanel({
       {list(t('courses'), courses, x => x.name, x => `/courses/${x.id}`)}
       {list(t('periods'), periods, x => x.name, x => `/periods/${x.id}`)}
       {list(t('groups'), groups, x => x.title, x => `/groups/${x.id}`)}
+      {list(t('students'), students, x => `${x.full_name}${x.presentation_title ? ` — «${x.presentation_title}»` : ''}`, x => `/students/${x.id}`)}
 
       <section>
         <h3>{t('sessions')}</h3>
@@ -82,7 +85,7 @@ export function AdminRemovalPanel({
           {sessions.length ? (
             sessions.map(x => (
               <div className="card row" key={x.id}>
-                <span>{x.title || `${t('session')} ${x.session_date}`} · {x.status}</span>
+                <span>{x.title || `${t('session')} ${x.session_date}`} · <span className={`pill ${x.status.toLowerCase()}`} lang="el" style={{ marginLeft: '.5rem', fontSize: '.72rem' }}>{toGreekUppercase(translateStatus(x.status, t))}</span></span>
                 <div className="actions">
                   {x.status === 'COMPLETED' && (
                     <button

@@ -22,6 +22,9 @@ export function VotingCountdown({ closesAt, totalDuration = 60, onExpire }: { cl
       if (remaining === 0 && !expiredCalled.current && onExpire) {
         expiredCalled.current = true;
         onExpire();
+        setTimeout(() => {
+          onExpire();
+        }, 800);
       }
     };
     update();

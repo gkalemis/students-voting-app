@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
-import { THEME_COLORS } from './ThemePicker';
 
 export function UserForm({
   close, saved, failed
@@ -118,39 +117,6 @@ export function LogoUpload({
   );
 }
 
-export function BackgroundPalette({
-  brand, setBrand
-}: {
-  brand: any;
-  setBrand: (x: any) => void;
-}) {
-  const { t } = useT();
-  return (
-    <section className="card">
-      <b>{t('background')}</b>
-      <div className="color-options">
-        {THEME_COLORS.map(color => (
-          <button
-            type="button"
-            aria-label={color}
-            title={color}
-            key={color}
-            className={`swatch ${brand.background_value === color ? 'selected' : ''}`}
-            style={{ background: color }}
-            onClick={() => setBrand({ ...brand, background_type: 'solid', background_value: color })}
-          />
-        ))}
-      </div>
-      <label>
-        {t('backgroundValue')}
-        <input
-          type="color"
-          value={/^#[0-9a-f]{6}$/i.test(brand.background_value || '') ? brand.background_value : '#0e2a47'}
-          onChange={e => setBrand({ ...brand, background_type: 'solid', background_value: e.target.value })}
-        />
-      </label>
-    </section>
-  );
-}
+
 
 

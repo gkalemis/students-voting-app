@@ -7,7 +7,7 @@ import { parseCsvText, extractRows, CsvRow } from '../csvParser';
 export const importRouter = Router();
 importRouter.use(authMiddleware);
 
-// 1. Full Hierarchy Import (Period -> Course -> Group -> Student)
+// 1. Full Hierarchy Import (Course -> Period -> Group -> Student)
 importRouter.post('/import/hierarchy', (req, res) => {
   const user = (req as any).user as User;
   let rows: CsvRow[] = [];
@@ -23,8 +23,8 @@ importRouter.post('/import/hierarchy', (req, res) => {
     return res.status(400).json({ error: 'Δεν βρέθηκαν έγκυρες εγγραφές στο CSV.' });
   }
 
-  let periodsCreated = 0;
   let coursesCreated = 0;
+  let periodsCreated = 0;
   let groupsCreated = 0;
   let studentsCreated = 0;
 
@@ -95,8 +95,8 @@ importRouter.post('/import/hierarchy', (req, res) => {
   res.json({
     success: true,
     summary: {
-      periods_created: periodsCreated,
       courses_created: coursesCreated,
+      periods_created: periodsCreated,
       groups_created: groupsCreated,
       students_created: studentsCreated,
       total_rows: rows.length

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useT } from '../context/LocaleContext';
-import { api, json } from '../api';
-import { translateError } from '../i18n';
+import { api, json, connect } from '../api';
+import { translateError, translateStatus } from '../i18n';
 import { Layout } from '../components/Layout';
 import { ResultsTable } from '../components/ResultsTable';
 import { PresentationHeaderCard } from '../components/PresentationHeaderCard';
-import { EditModal, QrModal, StudentDemoModal, CompleteModal, SessionQrCard, downloadAuth } from '../components/SessionModals';
+import { EditModal, QrModal, CompleteModal, SessionQrCard, downloadAuth } from '../components/SessionModals';
 import { toGreekUppercase } from '../utils/greek';
 
 export function Session() {
@@ -17,12 +17,24 @@ export function Session() {
   const [toastMsg, setToastMsg] = useState('');
   const [err, setErr] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
-  const [showStudentDemoModal, setShowStudentDemoModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const load = () => api(`/sessions/${id}`).then(setS).catch(e => setErr(translateError(e, language)));
   useEffect(() => { load(); }, [id, language]);
+
+  useEffect(() => {
+    if (!s?.public_id) return;
+    const cleanup = connect(s.public_id, () => {
+      load();
+    });
+    const hasVoting = s.presentations?.some((p: any) => p.status === 'VOTING_OPEN');
+    const interval = hasVoting ? setInterval(load, 2000) : undefined;
+    return () => {
+      cleanup();
+      if (interval) clearInterval(interval);
+    };
+  }, [s?.public_id, s?.presentations]);
 
   if (!s) return <Layout>{err || t('loading')}</Layout>;
 
@@ -64,17 +76,23 @@ export function Session() {
             <button onClick={() => act('reveal')}>{t('reveal')}</button>
           )}
           <div className="projector-and-demo-box">
-            <Link className="button secondary projector-nav-btn" target="_blank" to={`/projector/${s.public_id}`}>
+            <a
+              className="button secondary projector-nav-btn"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={`/projector/${s.public_id}`}
+            >
               📺 {t('projector')}
-            </Link>
-            <button
-              type="button"
-              className="student-demo-btn"
-              onClick={() => setShowStudentDemoModal(true)}
+            </a>
+            <a
+              className="button secondary student-demo-btn"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={`/join/${s.public_id}`}
               title={t('studentVoteDemoHint')}
             >
-              {t('studentVoteDemo')}
-            </button>
+              📱 {t('studentVoteDemo')}
+            </a>
           </div>
         </div>
       </div>
@@ -99,12 +117,14 @@ export function Session() {
           <PresentationHeaderCard
             brand={s.branding}
             courseName={s.course_name}
+            periodName={s.period_name}
             groupTitle={s.group_title}
             presenterName={activeP.presenter_name}
             presentationTitle={activeP.title}
             closesAt={activeP.voting_closes_at}
             voteCount={activeP.vote_count}
             categories={s.criteria}
+            onExpire={load}
             actions={
               <div className="actions" style={{ marginTop: '.8rem' }}>
                 <button type="button" className="secondary" onClick={() => act(`presentations/${activeP.id}/extend`, { seconds: 30 })}>
@@ -145,7 +165,7 @@ export function Session() {
         {s.presentations.map((p: any, idx: number) => (
           <div className="card row" key={p.id} style={p.status === 'VOTING_OPEN' ? { borderLeft: '4px solid #b52c35' } : {}}>
             <div>
-              <span className={`pill ${p.status.toLowerCase()}`} lang="el">{toGreekUppercase(p.status)}</span>
+              <span className={`pill ${p.status.toLowerCase()}`} lang="el">{toGreekUppercase(translateStatus(p.status, t))}</span>
               <span style={{ fontSize: '.85rem', color: '#687e95', marginLeft: '.5rem' }}>#{idx + 1}</span>
               <h3>{p.presenter_name}</h3>
               <p>{p.title || t('withoutTitle')} · <b>{p.vote_count}</b> {t('votes')}</p>
@@ -209,12 +229,7 @@ export function Session() {
         />
       )}
 
-      {showStudentDemoModal && (
-        <StudentDemoModal
-          publicId={s.public_id}
-          close={() => setShowStudentDemoModal(false)}
-        />
-      )}
+
 
       {showCompleteModal && (
         <CompleteModal

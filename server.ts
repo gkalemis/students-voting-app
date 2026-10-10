@@ -5,7 +5,8 @@ import fs from 'fs';
 import { WebSocketServer } from 'ws';
 import { initPersistence, saveDatabaseSync, scheduleSave } from './server/persistence';
 import { seedInitialData } from './server/seed';
-import { setupWebSocket } from './server/ws';
+import { db, getVoteCount } from './server/db';
+import { setupWebSocket, broadcastSession } from './server/ws';
 import { authRouter } from './server/routes/authRoutes';
 import { userRouter } from './server/routes/userRoutes';
 import { academicRouter } from './server/routes/academicRoutes';
@@ -25,6 +26,29 @@ if (!loaded) {
   saveDatabaseSync();
 }
 
+// Background auto-expiry ticker: automatically closes voting when time expires
+// and immediately broadcasts updates to projector, user, and lecturer screens
+function checkExpiredVoting() {
+  const now = Date.now();
+  for (const session of db.sessions) {
+    let sessionChanged = false;
+    for (const p of db.presentations) {
+      if (p.session_id === session.id && p.status === 'VOTING_OPEN') {
+        if (p.voting_closes_at && new Date(p.voting_closes_at).getTime() <= now) {
+          p.status = getVoteCount(p.id) > 0 ? 'EVALUATED' : 'NO_VOTES';
+          p.voting_closed_at = new Date().toISOString();
+          sessionChanged = true;
+        }
+      }
+    }
+    if (sessionChanged) {
+      broadcastSession(session.public_id, 'state_changed');
+      scheduleSave();
+    }
+  }
+}
+setInterval(checkExpiredVoting, 500);
+
 const app = express();
 app.use(express.json());
 app.use('/assets', express.static(ASSETS_DIR));
@@ -41,9 +65,49 @@ app.use((req, res, next) => {
   next();
 });
 
+import { adminMiddleware } from './server/middleware';
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '2.4.0' });
+});
+
+// Completely clean / reset database
+app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
+  try {
+    const dbFilePath = path.resolve('data', 'db.json');
+    if (fs.existsSync(dbFilePath)) {
+      fs.unlinkSync(dbFilePath);
+    }
+    db.periods = [];
+    db.courses = [];
+    db.groups = [];
+    db.students = [];
+    db.sessions = [];
+    db.criteria = [];
+    db.presentations = [];
+    db.tokens = [];
+    db.votes = [];
+    db.anonymousVoteScores = [];
+    db.users = [];
+    db.nextUserId = 1;
+    db.nextPeriodId = 1;
+    db.nextCourseId = 1;
+    db.nextGroupId = 1;
+    db.nextStudentId = 1;
+    db.nextSessionId = 1;
+    db.nextCriterionId = 1;
+    db.nextPresentationId = 1;
+    db.nextTokenId = 1;
+    db.nextVoteId = 1;
+
+    seedInitialData();
+    saveDatabaseSync();
+
+    res.json({ ok: true, message: 'Η βάση δεδομένων εκκαθαρίστηκε πλήρως.' });
+  } catch (err) {
+    res.status(500).json({ detail: 'Αποτυχία εκκαθάρισης βάσης: ' + String(err) });
+  }
 });
 
 // API Routes
@@ -73,7 +137,7 @@ async function startServer() {
   } else {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0', port: PORT, hmr: { server } },
+      server: { middlewareMode: true, host: '0.0.0.0', port: PORT, hmr: { server }, allowedHosts: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);

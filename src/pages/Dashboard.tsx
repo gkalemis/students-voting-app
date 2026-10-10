@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../context/LocaleContext';
 import { api } from '../api';
-import { translateError } from '../i18n';
+import { translateError, translateStatus } from '../i18n';
 import { FormKind } from '../types';
 import { Layout } from '../components/Layout';
 import { ResourceSection } from '../components/ResourceSection';
@@ -43,11 +43,8 @@ export function Dashboard() {
   const open = (kind: FormKind) => {
     setErr('');
     setNotice('');
-    if (kind === 'course' && !periods.length) return setErr(t('periodFirst'));
     if (kind === 'group' && !courses.length) return setErr(t('courseFirst'));
-    if (kind === 'group' && !periods.length) return setErr(t('periodFirst'));
     if (kind === 'session' && !courses.length) return setErr(t('courseFirst'));
-    if (kind === 'session' && !periods.length) return setErr(t('periodFirst'));
     if (kind === 'session' && !groups.length) return setErr(t('groupFirst'));
     setForm(kind);
   };
@@ -65,8 +62,8 @@ export function Dashboard() {
           <h1>{t('lecturerDashboard')}</h1>
           <p className="dashboard-subtitle">
             {language === 'el'
-              ? 'Διαχείριση περιόδων, μαθημάτων, ομάδων και συνεδριών ψηφοφορίας'
-              : 'Academic structure, student groups, and presentation sessions'}
+              ? 'Διαχείριση μαθημάτων, περιόδων, ομάδων και συνεδριών ψηφοφορίας'
+              : 'Management of courses, academic periods, student groups, and voting sessions'}
           </p>
         </div>
 
@@ -95,21 +92,21 @@ export function Dashboard() {
             <button
               type="button"
               className="btn-workflow"
-              onClick={() => open('period')}
-              title={language === 'el' ? 'Βήμα 1: Ακαδημαϊκή περίοδος' : 'Step 1: Academic period'}
+              onClick={() => open('course')}
+              title={language === 'el' ? 'Βήμα 1: Μάθημα' : 'Step 1: Course'}
             >
               <span className="workflow-step-num">1</span>
-              <span>+ {t('period')}</span>
+              <span>+ {t('course')}</span>
             </button>
             <span className="workflow-arrow" aria-hidden="true">→</span>
             <button
               type="button"
               className="btn-workflow"
-              onClick={() => open('course')}
-              title={language === 'el' ? 'Βήμα 2: Μάθημα περιόδου' : 'Step 2: Course in period'}
+              onClick={() => open('period')}
+              title={language === 'el' ? 'Βήμα 2: Ακαδημαϊκή περίοδος' : 'Step 2: Academic period'}
             >
               <span className="workflow-step-num">2</span>
-              <span>+ {t('course')}</span>
+              <span>+ {t('period')}</span>
             </button>
             <span className="workflow-arrow" aria-hidden="true">→</span>
             <button
@@ -139,8 +136,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      <ResourceSection title={t('periods')} items={periods.map(x => x.name)} />
       <ResourceSection title={t('courses')} items={courses.map(x => x.name)} />
+      <ResourceSection title={t('periods')} items={periods.map(x => x.name)} />
       <ResourceSection title={t('groups')} items={groups.map(x => x.title)} />
 
       <StudentManager groups={groups} onOpenImport={() => setShowImport(true)} onStudentsChanged={onStudentsChanged} />
@@ -151,7 +148,7 @@ export function Dashboard() {
         {sessions.length ? (
           sessions.map(s => (
             <Link className="card session" to={`/session/${s.id}`} key={s.id}>
-              <span className={`pill ${s.status.toLowerCase()}`} lang="el">{toGreekUppercase(s.status)}</span>
+              <span className={`pill ${s.status.toLowerCase()}`} lang="el">{toGreekUppercase(translateStatus(s.status, t))}</span>
               <h3>{s.title || `${t('session')} ${s.session_date}`}</h3>
               <p>{s.is_demo ? 'DEMO · ' : ''}{s.session_date}</p>
             </Link>

@@ -4,12 +4,15 @@ import { db, effectiveBranding, getVoteCount, calculateResults, hashToken } from
 import { broadcastSession } from '../ws';
 import { ParticipationToken, Vote } from '../types';
 
+import { cleanupGhostPresentations } from './sessionRoutes';
+
 export const publicRouter = Router();
 
 // Public Session State & Voting
 publicRouter.get('/public/sessions/:publicId', (req, res) => {
   const s = db.sessions.find(x => x.public_id === req.params.publicId);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
+  cleanupGhostPresentations(s.id);
 
   // Auto-close expired active presentation
   const activeP = db.presentations.find(p => p.session_id === s.id && p.status === 'VOTING_OPEN');
