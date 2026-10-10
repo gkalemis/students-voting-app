@@ -6,6 +6,7 @@ import { LocaleProvider } from './context/LocaleContext';
 import { App } from './App';
 import './styles.css';
 import './extras.css';
+import './projector.css';
 
 const container = document.getElementById('root');
 if (container) {

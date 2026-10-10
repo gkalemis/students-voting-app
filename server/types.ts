@@ -11,9 +11,9 @@ export interface User {
 }
 
 export interface Branding {
-  university_name?: string;
-  school_name?: string;
-  department_name?: string;
+  university_name?: string | { el: string; en: string };
+  school_name?: string | { el: string; en: string };
+  department_name?: string | { el: string; en: string };
   logo_url?: string | null;
   background_type?: string;
   background_value?: string;

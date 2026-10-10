@@ -40,24 +40,28 @@ export function Projector() {
               />
             ) : s.results_revealed ? (
               <div className="card projector-results-card">
-                <BrandHeader brand={s.branding} />
-                <p className="projector-context-tag">
-                  {s.course} · {s.period} · {s.group}
-                </p>
+                <BrandHeader brand={s.branding} isProjector />
+                <div className="projector-context-pill">
+                  <span className="pres-badge course-badge projector-badge">🎓 {s.course}</span>
+                  {s.period && <span className="pres-badge school-badge projector-badge">🏛️ {s.period}</span>}
+                  {s.group && <span className="pres-badge dept-badge projector-badge">👥 {s.group}</span>}
+                </div>
                 <ResultsTable rows={s.results} />
               </div>
             ) : (
               <div className="card projector-idle-card">
-                <BrandHeader brand={s.branding} />
-                <p className="projector-context-tag">
-                  {s.course} · {s.period} · {s.group}
-                </p>
-                <h1 className="projector-status-heading">
-                  {s.status === 'COMPLETED' ? t('sessionCompleted') : t('waitingPresentation')}
-                </h1>
-                <p style={{ color: '#4b6177', fontSize: '1.2rem', marginTop: '.5rem' }}>
-                  {t('autoUpdate')}
-                </p>
+                <BrandHeader brand={s.branding} isProjector />
+                <div className="projector-context-pill">
+                  <span className="pres-badge course-badge projector-badge">🎓 {s.course}</span>
+                  {s.period && <span className="pres-badge school-badge projector-badge">🏛️ {s.period}</span>}
+                  {s.group && <span className="pres-badge dept-badge projector-badge">👥 {s.group}</span>}
+                </div>
+                <div className="projector-idle-content">
+                  <h1 className="projector-status-heading">
+                    {s.status === 'COMPLETED' ? t('sessionCompleted') : t('waitingPresentation')}
+                  </h1>
+                  <p className="projector-sub-instruction">{t('autoUpdate')}</p>
+                </div>
               </div>
             )}
           </section>

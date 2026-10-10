@@ -30,6 +30,17 @@ function storeImage(file?: Express.Multer.File): string | null {
   return filename;
 }
 
+function brandingText(value: unknown) {
+  if (typeof value === 'string' && value.length <= 200) return value;
+  if (value && typeof value === 'object') {
+    const item = value as Record<string, unknown>;
+    if (typeof item.el === 'string' && typeof item.en === 'string' && item.el.length <= 200 && item.en.length <= 200) {
+      return { el: item.el, en: item.en };
+    }
+  }
+  throw new Error('INVALID_BRANDING');
+}
+
 // Public
 brandingRouter.get('/public/branding', (req, res) => {
   res.json(db.globalBranding);
@@ -41,10 +52,25 @@ brandingRouter.get('/branding', adminMiddleware, (req, res) => {
 });
 
 brandingRouter.put('/branding', adminMiddleware, (req, res) => {
-  for (const key of ['university_name', 'school_name', 'department_name', 'background_type', 'background_value', 'background_opacity']) {
-    if (Object.prototype.hasOwnProperty.call(req.body, key)) (db.globalBranding as any)[key] = req.body[key];
-  }
-  res.json(db.globalBranding);
+  try {
+    for (const key of ['university_name', 'school_name', 'department_name'] as const) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) db.globalBranding[key] = brandingText(req.body[key]);
+    }
+    if (req.body.background_type !== undefined) {
+      if (!['none', 'solid', 'gradient', 'image'].includes(req.body.background_type)) throw new Error('INVALID_BRANDING');
+      db.globalBranding.background_type = req.body.background_type;
+    }
+    if (req.body.background_value !== undefined) {
+      if (typeof req.body.background_value !== 'string' || req.body.background_value.length > 200) throw new Error('INVALID_BRANDING');
+      db.globalBranding.background_value = req.body.background_value;
+    }
+    if (req.body.background_opacity !== undefined) {
+      const opacity = Number(req.body.background_opacity);
+      if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) throw new Error('INVALID_BRANDING');
+      db.globalBranding.background_opacity = opacity;
+    }
+    res.json(db.globalBranding);
+  } catch { res.status(422).json({ detail: 'Μη έγκυρα στοιχεία ιδρυματικής ταυτότητας' }); }
 });
 
 brandingRouter.post('/branding/logo', adminMiddleware, upload.single('file'), (req, res) => {

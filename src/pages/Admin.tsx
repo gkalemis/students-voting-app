@@ -8,6 +8,7 @@ import { BrandHeader } from '../components/BrandHeader';
 import { UserForm, LogoUpload } from '../components/AdminForms';
 import { ResetPasswordModal, DeleteUserModal } from '../components/AdminModals';
 import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
+import { BrandingFields } from '../components/BrandingFields';
 
 export function Admin() {
   const { user: currentUser } = useAuth();
@@ -158,27 +159,7 @@ export function Admin() {
           }
         }}
       >
-        <label>
-          {t('universityName')}
-          <input
-            value={brand.university_name || ''}
-            onChange={e => setBrand({ ...brand, university_name: e.target.value })}
-          />
-        </label>
-        <label>
-          {t('schoolName')}
-          <input
-            value={brand.school_name || ''}
-            onChange={e => setBrand({ ...brand, school_name: e.target.value })}
-          />
-        </label>
-        <label style={{ gridColumn: '1 / -1' }}>
-          {t('departmentName')}
-          <input
-            value={brand.department_name || ''}
-            onChange={e => setBrand({ ...brand, department_name: e.target.value })}
-          />
-        </label>
+        <BrandingFields brand={brand} setBrand={setBrand} />
         <div style={{ gridColumn: '1 / -1' }}>
           <button>{t('save')}</button>
         </div>
@@ -238,8 +219,8 @@ export function Admin() {
       )}
 
       {showResetDbModal && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" style={{ background: '#0f172a99', backdropFilter: 'blur(6px)' }}>
-          <div className="modal card" style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px', boxShadow: '0 25px 50px -12px #0f172a33' }}>
+        <div className="modal" role="dialog" aria-modal="true" onClick={() => setShowResetDbModal(false)}>
+          <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px' }}>
             <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
               <div style={{ width: '56px', height: '56px', margin: '0 auto 1rem auto', borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
                 ⚠️

@@ -93,6 +93,7 @@ app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
     if (fs.existsSync(dbFilePath)) {
       fs.unlinkSync(dbFilePath);
     }
+    const currentLogo = db.globalBranding?.logo_url || null;
     db.periods = [];
     db.courses = [];
     db.groups = [];
@@ -114,6 +115,23 @@ app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
     db.nextPresentationId = 1;
     db.nextTokenId = 1;
     db.nextVoteId = 1;
+
+    db.globalBranding = {
+      university_name: {
+        el: 'Εθνικό Μετσόβειο Πολυτεχνείο',
+        en: 'National Technical University of Athens'
+      },
+      school_name: {
+        el: 'Σχολή Πολιτικών Μηχανικών',
+        en: 'School of Civil Engineering'
+      },
+      department_name: '',
+      background_type: 'none',
+      background_value: '#0e2a47',
+      logo_url: currentLogo,
+      background_image_url: null,
+      background_opacity: 0.12
+    };
 
     seedInitialData();
     saveDatabaseSync();
