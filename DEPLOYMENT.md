@@ -40,6 +40,14 @@ docker compose logs --no-color --tail=100 voting-app
 
 Verify the configured public `/api/health`, UI, TLS certificate, HSTS and Content Security Policy. Test login, first-password change, WebSockets, QR participation, voting, and persistence across a controlled restart.
 
+For routine reviewed deployments, use the one-step operator script:
+
+```bash
+./deploy.sh
+```
+
+It requires a clean Git working tree, validates Compose, builds before downtime, creates and validates a private timestamped data backup, recreates only `voting-app`, waits for health, verifies public HTTPS/security headers, and confirms that port 3000 is not published. It never pulls or pushes Git. If deployment fails after stopping the service, it retags and recreates the previous image automatically.
+
 `data-init` exiting with code 0 is expected. It prepares the bind-mounted data directory for the non-root application UID. Do not run multiple application or CLI writers against `data/db.json` concurrently.
 
 ## Backup and update
