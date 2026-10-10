@@ -17,7 +17,7 @@ import { exportRouter } from './server/routes/exportRoutes';
 import { brandingRouter, ASSETS_DIR } from './server/routes/brandingRoutes';
 import { importRouter } from './server/routes/importRoutes';
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Initialize persistence from data/db.json; seed if first run
 const loaded = initPersistence();

@@ -1,10 +1,14 @@
+version: '3.8'
+
 services:
   voting-app:
     build: .
     container_name: ntua-voting-app
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # Port 3000 is NOT exposed to the host server when using Traefik reverse proxy.
+    # Traefik connects via internal Docker network and proxies traffic directly to container port 3000.
+    # ports:
+    #   - "3000:3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -13,3 +17,17 @@ services:
       - SECRET_KEY=ntua-voting-secret-key-production-replace-me
     volumes:
       - ./data:/app/data
+    networks:
+      - traefik-public
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voting-app.rule=Host(`voting.yourdomain.com`)"
+      - "traefik.http.routers.voting-app.entrypoints=websecure"
+      - "traefik.http.routers.voting-app.tls=true"
+      - "traefik.http.routers.voting-app.tls.certresolver=myresolver"
+      - "traefik.http.services.voting-app.loadbalancer.server.port=3000"
+
+networks:
+  traefik-public:
+    external: true
