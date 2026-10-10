@@ -22,7 +22,13 @@ require() {
 
 env_value() {
   local key="$1" value
-  value="$(sed -n "s/^${key}=//p" .env | tail -n 1 | tr -d '\r')"
+  value="$(awk -v key="$key" '
+    $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+      sub("^[[:space:]]*" key "[[:space:]]*=[[:space:]]*", "")
+      result=$0
+    }
+    END { printf "%s", result }
+  ' .env | tr -d '\r')"
   value="${value%\"}"; value="${value#\"}"
   value="${value%\'}"; value="${value#\'}"
   printf '%s' "$value"
