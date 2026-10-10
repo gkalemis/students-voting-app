@@ -24,6 +24,7 @@ Current release candidate: 2.4.0
 - Operator-built the selectively integrated image successfully on 2026-10-10. The Docker build completed all stages, including `npm run build` TypeScript/Vite compilation, and produced image `sha256:ed8c8fcd0b9195fddcec28010d9b69c9f79d2104f3c0a5e5a615072ffedc0df9`. It has not yet replaced the running production container.
 - The operator pushed the reviewed integration to GitHub at commit `26e123d`, created and verified `backups/pre-integrated-deploy-20261010-144639/data.tar.gz`, and deployed image `sha256:ed8c8fcd0b9195fddcec28010d9b69c9f79d2104f3c0a5e5a615072ffedc0df9`. Production returned healthy version `2.4.0`, required HTTPS security headers, and no host binding for port 3000.
 - Replaced the obsolete host npm/PM2/systemd `deploy.sh` with a Docker-only one-step workflow. It refuses dirty source trees, validates configuration, builds before downtime, verifies a private full-data archive, waits for health, checks public HTTPS/security headers and port isolation, and restores the previous image automatically on failure. It never performs Git pulls or pushes.
+- Added a remote-synchronization deployment guard: `deploy.sh` fetches the current branch's configured upstream and proceeds only when both commits match exactly. Behind, ahead, and diverged states stop before Docker activity and print specific review/remediation information; the script still never pulls or pushes automatically.
 
 ## Completed
 

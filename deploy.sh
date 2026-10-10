@@ -50,6 +50,39 @@ if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
   fail 'Working tree is not clean; commit or intentionally remove local source changes first'
 fi
 
+branch="$(git symbolic-ref --quiet --short HEAD)" || fail 'Deployments require a named Git branch'
+upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null)" \
+  || fail "Branch ${branch} has no configured upstream"
+remote="$(git config --get "branch.${branch}.remote")"
+[ -n "$remote" ] || fail "Branch ${branch} has no configured remote"
+
+printf 'Fetching %s for synchronization verification...\n' "$remote"
+git fetch --prune "$remote"
+local_commit="$(git rev-parse HEAD)"
+upstream_commit="$(git rev-parse '@{upstream}')"
+merge_base="$(git merge-base HEAD '@{upstream}')"
+printf 'Local:    %s %s\n' "$branch" "${local_commit:0:12}"
+printf 'Upstream: %s %s\n' "$upstream" "${upstream_commit:0:12}"
+
+if [ "$local_commit" != "$upstream_commit" ]; then
+  if [ "$local_commit" = "$merge_base" ]; then
+    printf '\nDeployment stopped: local source is behind %s.\n' "$upstream" >&2
+    git log --oneline "HEAD..@{upstream}" >&2
+    git diff --stat "HEAD..@{upstream}" >&2
+    git diff --name-status "HEAD..@{upstream}" >&2
+    printf '\nReview the changes, then run: git pull --ff-only\n' >&2
+  elif [ "$upstream_commit" = "$merge_base" ]; then
+    printf '\nDeployment stopped: local source contains commits not pushed to %s.\n' "$upstream" >&2
+    git log --oneline "@{upstream}..HEAD" >&2
+    printf '\nReview and push the commits before deployment.\n' >&2
+  else
+    printf '\nDeployment stopped: %s and %s have diverged.\n' "$branch" "$upstream" >&2
+    printf 'Resolve the branches manually; do not reset or force-push production history.\n' >&2
+  fi
+  exit 1
+fi
+printf '%s\n' 'Git synchronization verified.'
+
 docker compose config --quiet
 public_base_url="$(env_value PUBLIC_BASE_URL)"
 case "$public_base_url" in

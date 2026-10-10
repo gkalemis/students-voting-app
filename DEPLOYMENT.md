@@ -46,7 +46,7 @@ For routine reviewed deployments, use the one-step operator script:
 ./deploy.sh
 ```
 
-It requires a clean Git working tree, validates Compose, builds before downtime, creates and validates a private timestamped data backup, recreates only `voting-app`, waits for health, verifies public HTTPS/security headers, and confirms that port 3000 is not published. It never pulls or pushes Git. If deployment fails after stopping the service, it retags and recreates the previous image automatically.
+It requires a clean Git working tree, fetches the configured upstream, and deploys only when local `HEAD` exactly matches that upstream. When GitHub differs, it prints the relevant commits and changed paths and stops before Docker activity; review and run `git pull --ff-only` manually. It then validates Compose, builds before downtime, creates and validates a private timestamped data backup, recreates only `voting-app`, waits for health, verifies public HTTPS/security headers, and confirms that port 3000 is not published. It never pulls or pushes Git. If deployment fails after stopping the service, it retags and recreates the previous image automatically.
 
 `data-init` exiting with code 0 is expected. It prepares the bind-mounted data directory for the non-root application UID. Do not run multiple application or CLI writers against `data/db.json` concurrently.
 
