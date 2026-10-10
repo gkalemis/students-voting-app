@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan for standardizing component order (Period -> Course -> Group -> Students -> Presentation Title), introducing a retractable student manager tool on the lecturer dashboard, and enabling immediate course structure updates when adding or deleting students.",
+  "updatedAt":  "2026-10-10T08:39:06.091166639Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

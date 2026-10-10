@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="el">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <meta name="theme-color" content="#15365b"/>
+    <meta name="color-scheme" content="light"/>
+    <title>Ψηφοφορία Παρουσιάσεων - Presentation Voting</title>
+    <meta name="description" content="Real-time voting and evaluation platform for student presentations with lecturer dashboard, projector view, and mobile voting."/>
+    <meta property="og:title" content="Ψηφοφορία Παρουσιάσεων - Presentation Voting"/>
+    <meta property="og:description" content="Real-time voting and evaluation platform for student presentations with lecturer dashboard, projector view, and mobile voting."/>
+    <script>
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && (event.reason.message?.includes('WebSocket') || String(event.reason).includes('WebSocket'))) {
+          event.preventDefault();
+        }
+      });
+      window.addEventListener('error', function(event) {
+        if (event.message && (event.message.includes('WebSocket') || String(event.error).includes('WebSocket'))) {
+          event.preventDefault();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

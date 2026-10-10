@@ -1,0 +1,90 @@
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import { WebSocketServer } from 'ws';
+import { initPersistence, saveDatabaseSync, scheduleSave } from './server/persistence';
+import { seedInitialData } from './server/seed';
+import { setupWebSocket } from './server/ws';
+import { authRouter } from './server/routes/authRoutes';
+import { userRouter } from './server/routes/userRoutes';
+import { academicRouter } from './server/routes/academicRoutes';
+import { sessionRouter } from './server/routes/sessionRoutes';
+import { presentationRouter } from './server/routes/presentationRoutes';
+import { publicRouter } from './server/routes/publicRoutes';
+import { exportRouter } from './server/routes/exportRoutes';
+import { brandingRouter, ASSETS_DIR } from './server/routes/brandingRoutes';
+import { importRouter } from './server/routes/importRoutes';
+
+const PORT = 3000;
+
+// Initialize persistence from data/db.json; seed if first run
+const loaded = initPersistence();
+if (!loaded) {
+  seedInitialData();
+  saveDatabaseSync();
+}
+
+const app = express();
+app.use(express.json());
+app.use('/assets', express.static(ASSETS_DIR));
+
+// Auto-save data on modifying requests
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 400) {
+        scheduleSave();
+      }
+    });
+  }
+  next();
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', version: '2.4.0' });
+});
+
+// API Routes
+app.use('/api', publicRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/users', userRouter);
+app.use('/api', academicRouter);
+app.use('/api', sessionRouter);
+app.use('/api', presentationRouter);
+app.use('/api', exportRouter);
+app.use('/api', brandingRouter);
+app.use('/api', importRouter);
+
+async function startServer() {
+  const server = http.createServer(app);
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on('upgrade', (request, socket, head) => {
+    setupWebSocket(wss, request, socket, head);
+  });
+
+  if (process.env.NODE_ENV === 'production' && fs.existsSync(path.resolve('dist'))) {
+    app.use(express.static(path.resolve('dist')));
+    app.get('*', (req, res) => {
+      res.sendFile(path.resolve('dist/index.html'));
+    });
+  } else {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true, host: '0.0.0.0', port: PORT, hmr: { server } },
+      appType: 'spa'
+    });
+    app.use(vite.middlewares);
+  }
+
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Presentation Voting server ready on http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer().catch(err => {
+  console.error('Fatal startup error:', err);
+  process.exit(1);
+});
