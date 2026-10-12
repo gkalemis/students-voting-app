@@ -1,3 +1,5 @@
+import { safeStorage } from './utils/storage';
+
 export const THEME_COLORS = [
   '#6cc5d2', // Pale turquoise / cyan
   '#f5cb5c', // Soft pale yellow / gold
@@ -13,7 +15,7 @@ export const THEME_COLORS = [
 ];
 
 export function applyThemeColor(color?: string) {
-  const chosen = color || localStorage.getItem('theme_color') || THEME_COLORS[0];
+  const chosen = color || safeStorage.getItem('theme_color') || THEME_COLORS[0];
   document.documentElement.style.setProperty('--accent', chosen);
   const hex = chosen.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16) || 0;
@@ -22,6 +24,6 @@ export function applyThemeColor(color?: string) {
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   document.documentElement.style.setProperty('--accent-contrast', lum > 0.6 ? '#0f172a' : '#ffffff');
   if (color) {
-    localStorage.setItem('theme_color', color);
+    safeStorage.setItem('theme_color', color);
   }
 }

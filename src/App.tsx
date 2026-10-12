@@ -23,6 +23,7 @@ export function App() {
 
   return (
     <Routes>
+      <Route path="/" element={<Navigate to={user ? home : '/login'} replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/join/:publicId" element={<Join />} />
       <Route path="/projector/:publicId" element={<Projector />} />

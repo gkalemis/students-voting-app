@@ -4,6 +4,7 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 
 import { THEME_COLORS, applyThemeColor } from '../theme';
+import { safeStorage } from '../utils/storage';
 export { THEME_COLORS, applyThemeColor };
 
 export function ThemePicker() {
@@ -11,7 +12,7 @@ export function ThemePicker() {
   const { t } = useT();
 
   useEffect(() => {
-    const color = user?.theme_color || localStorage.getItem('theme_color') || THEME_COLORS[0];
+    const color = user?.theme_color || safeStorage.getItem('theme_color') || THEME_COLORS[0];
     applyThemeColor(color);
   }, [user?.theme_color]);
 

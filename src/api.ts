@@ -1,5 +1,7 @@
+import { safeStorage } from './utils/storage';
+
 const BASE='/api';
-export const token=()=>localStorage.getItem('auth_token');
+export const token=()=>safeStorage.getItem('auth_token');
 function errorMessage(detail:unknown,status:number){
   if(typeof detail==='string')return detail;
   if(Array.isArray(detail))return detail.map(item=>{
@@ -19,3 +21,32 @@ export async function api(path:string, options:RequestInit={}){
 export const json=(method:string,body?:unknown):RequestInit=>({method,body:body===undefined?undefined:JSON.stringify(body)});
 export function connect(publicId:string,onUpdate:()=>void){let socket:WebSocket,stopped=false,retry=1000;
  const open=()=>{const proto=location.protocol==='https:'?'wss':'ws';socket=new WebSocket(`${proto}://${location.host}/api/ws/${publicId}`);socket.onmessage=onUpdate;socket.onerror=()=>{};socket.onopen=()=>{retry=1000;onUpdate();};socket.onclose=()=>{if(!stopped)setTimeout(open,retry=Math.min(retry*2,10000))}};open();return()=>{stopped=true;socket?.close()}}
+
+export function downloadAuth(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  const href = e.currentTarget.href;
+  fetch(href, {
+    headers: token() ? { 'Authorization': `Bearer ${token()}` } : {}
+  })
+    .then(async r => {
+      if (!r.ok) throw new Error('Download failed');
+      const blob = await r.blob();
+      const dis = r.headers.get('Content-Disposition');
+      let filename = 'export';
+      if (dis && dis.includes('filename=')) {
+        const match = dis.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => {
+      window.open(href, '_blank');
+    });
+}

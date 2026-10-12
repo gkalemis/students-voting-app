@@ -1,30 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useT } from '../context/LocaleContext';
-import { api } from '../api';
-import { translateError, translateStatus } from '../i18n';
-import { FormKind } from '../types';
+import { api, json } from '../api';
+import { translateError } from '../i18n';
+import { FormKind, SessionItem } from '../types';
 import { Layout } from '../components/Layout';
-import { ResourceSection } from '../components/ResourceSection';
 import { ResourceForm } from '../components/ResourceForm';
 import { StudentManager } from '../components/StudentManager';
 import { HierarchyView } from '../components/HierarchyView';
 import { CsvImportModal } from '../components/CsvImportModal';
-import { toGreekUppercase } from '../utils/greek';
+import { SessionEditorModal } from '../components/SessionEditorModal';
+import { ActiveSessionBanner } from '../components/dashboard/ActiveSessionBanner';
+import { WorkflowBar } from '../components/dashboard/WorkflowBar';
+import { WaitingSessionsSection } from '../components/dashboard/WaitingSessionsSection';
+import { ArchivedSessionsSection } from '../components/dashboard/ArchivedSessionsSection';
+import { DashboardDeleteModal } from '../components/dashboard/DashboardDeleteModal';
+import { ConcurrencyLockModal } from '../components/dashboard/ConcurrencyLockModal';
 
 export function Dashboard() {
   const { t, language } = useT();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<any[]>([]);
   const [periods, setPeriods] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [form, setForm] = useState<FormKind>(null);
   const [showImport, setShowImport] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [studentVersion, setStudentVersion] = useState(0);
   const [err, setErr] = useState('');
   const [notice, setNotice] = useState('');
-
-  const onStudentsChanged = () => setStudentVersion(v => v + 1);
+  const [concurrencyLock, setConcurrencyLock] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ path: string; label: string; type: string } | null>(null);
 
   const reload = () =>
     Promise.all([api('/courses'), api('/periods'), api('/groups'), api('/sessions')])
@@ -49,11 +56,40 @@ export function Dashboard() {
     setForm(kind);
   };
 
-  const saved = () => {
-    setForm(null);
-    setNotice(t('created'));
-    reload();
+  const handleActivateSession = async (sessionId: number) => {
+    setErr('');
+    setNotice('');
+    try {
+      await api(`/sessions/${sessionId}/activate`, json('POST'));
+      setNotice(language === 'el' ? 'Η συνεδρία ενεργοποιήθηκε επιτυχώς!' : 'Session activated successfully!');
+      reload();
+      navigate(`/session/${sessionId}`);
+    } catch (e: any) {
+      if (e?.error === 'SESSION_CONCURRENCY_LOCK' || e?.status === 409) {
+        setConcurrencyLock(e);
+      } else {
+        setErr(translateError(e, language));
+      }
+    }
   };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteTarget) return;
+    setErr('');
+    try {
+      await api(deleteTarget.path, json('DELETE'));
+      setNotice(t('actionDone'));
+      setDeleteTarget(null);
+      reload();
+    } catch (e: any) {
+      setErr(translateError(e, language));
+      setDeleteTarget(null);
+    }
+  };
+
+  const activeOrUnarchived = sessions.find(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
+  const waitingSessions = sessions.filter(s => s.status === 'WAITING' || s.status === 'DRAFT');
+  const archivedSessions = sessions.filter(s => s.status === 'ARCHIVED');
 
   return (
     <Layout>
@@ -62,17 +98,12 @@ export function Dashboard() {
           <h1>{t('lecturerDashboard')}</h1>
           <p className="dashboard-subtitle">
             {language === 'el'
-              ? 'Διαχείριση μαθημάτων, περιόδων, ομάδων και συνεδριών ψηφοφορίας'
-              : 'Management of courses, academic periods, student groups, and voting sessions'}
+              ? 'Διαχείριση μαθημάτων, ομάδων και συνεδριών ψηφοφορίας'
+              : 'Management of courses, student groups, and voting sessions'}
           </p>
         </div>
-
         <div className="dashboard-main-cta">
-          <button
-            type="button"
-            className="btn-create-session"
-            onClick={() => open('session')}
-          >
+          <button type="button" className="btn-create-session" onClick={() => open('session')}>
             <span>🚀</span>
             <span>+ {t('session')}</span>
           </button>
@@ -82,81 +113,110 @@ export function Dashboard() {
       {err && <p className="error" role="alert">{err}</p>}
       {notice && <p className="notice" role="status">{notice}</p>}
 
-      {/* Structured Action Toolbar */}
-      <div className="dashboard-action-panel">
-        <div className="action-panel-workflow">
-          <span className="panel-section-title" lang="el">
-            {language === 'el' ? toGreekUppercase('1. Δομή μαθημάτων (Βήματα)') : '1. Course structure (Steps)'}
-          </span>
-          <div className="workflow-buttons">
-            <button
-              type="button"
-              className="btn-workflow"
-              onClick={() => open('course')}
-              title={language === 'el' ? 'Βήμα 1: Μάθημα' : 'Step 1: Course'}
-            >
-              <span className="workflow-step-num">1</span>
-              <span>+ {t('course')}</span>
-            </button>
-            <span className="workflow-arrow" aria-hidden="true">→</span>
-            <button
-              type="button"
-              className="btn-workflow"
-              onClick={() => open('period')}
-              title={language === 'el' ? 'Βήμα 2: Ακαδημαϊκή περίοδος' : 'Step 2: Academic period'}
-            >
-              <span className="workflow-step-num">2</span>
-              <span>+ {t('period')}</span>
-            </button>
-            <span className="workflow-arrow" aria-hidden="true">→</span>
-            <button
-              type="button"
-              className="btn-workflow"
-              onClick={() => open('group')}
-              title={language === 'el' ? 'Βήμα 3: Φοιτητική ομάδα' : 'Step 3: Student group'}
-            >
-              <span className="workflow-step-num">3</span>
-              <span>+ {t('group')}</span>
-            </button>
+      {activeOrUnarchived && <ActiveSessionBanner session={activeOrUnarchived} />}
+
+      <WorkflowBar onOpen={open} onOpenImport={() => setShowImport(true)} />
+
+      {/* Academic Periods & Courses & Groups Resource Lists */}
+      <section style={{ margin: '1.5rem 0' }}>
+        <h2>{t('periods')}</h2>
+        {periods.length ? (
+          <div className="list">
+            {periods.map(p => (
+              <div className="card row" key={p.id}>
+                <div>
+                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{p.name}</b>
+                </div>
+                <button
+                  type="button"
+                  className="danger outline"
+                  style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
+                  onClick={() => setDeleteTarget({ path: `/periods/${p.id}`, label: p.name, type: t('period') })}
+                >
+                  🗑️ {t('delete')}
+                </button>
+              </div>
+            ))}
           </div>
-        </div>
-
-        <div className="action-panel-bulk">
-          <span className="panel-section-title" lang="el">
-            {language === 'el' ? toGreekUppercase('2. Μαζικά εργαλεία') : '2. Bulk utilities'}
-          </span>
-          <button
-            type="button"
-            onClick={() => setShowImport(true)}
-            className="outline import-csv-btn dashboard-import-btn"
-          >
-            <span>📥</span>
-            <span>{t('importCsv')}</span>
-          </button>
-        </div>
-      </div>
-
-      <ResourceSection title={t('courses')} items={courses.map(x => x.name)} />
-      <ResourceSection title={t('periods')} items={periods.map(x => x.name)} />
-      <ResourceSection title={t('groups')} items={groups.map(x => x.title)} />
-
-      <StudentManager groups={groups} onOpenImport={() => setShowImport(true)} onStudentsChanged={onStudentsChanged} />
-      <HierarchyView periods={periods} courses={courses} groups={groups} refreshKey={studentVersion} />
-
-      <h2>{t('sessions')}</h2>
-      <div className="grid">
-        {sessions.length ? (
-          sessions.map(s => (
-            <Link className="card session" to={`/session/${s.id}`} key={s.id}>
-              <span className={`pill ${s.status.toLowerCase()}`} lang="el">{toGreekUppercase(translateStatus(s.status, t))}</span>
-              <h3>{s.title || `${t('session')} ${s.session_date}`}</h3>
-              <p>{s.is_demo ? 'DEMO · ' : ''}{s.session_date}</p>
-            </Link>
-          ))
         ) : (
           <p>{t('noItems')}</p>
         )}
-      </div>
+      </section>
+
+      <section style={{ margin: '1.5rem 0' }}>
+        <h2>{t('courses')}</h2>
+        {courses.length ? (
+          <div className="list">
+            {courses.map(c => (
+              <div className="card row" key={c.id}>
+                <div>
+                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{c.name}</b>
+                  {c.description && <span style={{ color: '#64748b', fontSize: '.88rem', marginLeft: '.6rem' }}>({c.description})</span>}
+                </div>
+                <button
+                  type="button"
+                  className="danger outline"
+                  style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
+                  onClick={() => setDeleteTarget({ path: `/courses/${c.id}`, label: c.name, type: t('course') })}
+                >
+                  🗑️ {t('delete')}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>{t('noItems')}</p>
+        )}
+      </section>
+
+      <section style={{ margin: '1.5rem 0' }}>
+        <h2>{t('groups')}</h2>
+        {groups.length ? (
+          <div className="list">
+            {groups.map(g => {
+              const crs = courses.find(c => c.id === g.course_id);
+              return (
+                <div className="card row" key={g.id}>
+                  <div>
+                    <b style={{ fontSize: '1rem', color: '#0f172a' }}>{g.title}</b>
+                    {crs && <span style={{ color: '#475569', fontSize: '.88rem', marginLeft: '.6rem' }}>[{crs.name}]</span>}
+                    {g.presentation_date && <span style={{ color: '#64748b', fontSize: '.85rem', marginLeft: '.5rem' }}>· {g.presentation_date}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="danger outline"
+                    style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
+                    onClick={() => setDeleteTarget({ path: `/groups/${g.id}`, label: g.title, type: t('group') })}
+                  >
+                    🗑️ {t('delete')}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p>{t('noItems')}</p>
+        )}
+      </section>
+
+      <StudentManager groups={groups} onOpenImport={() => setShowImport(true)} onStudentsChanged={() => setStudentVersion(v => v + 1)} />
+      <HierarchyView periods={periods} courses={courses} groups={groups} refreshKey={studentVersion} />
+
+      <WaitingSessionsSection
+        sessions={waitingSessions}
+        onAddSession={() => open('session')}
+        onActivate={handleActivateSession}
+        onEdit={id => setEditingSessionId(id)}
+        onDelete={s => setDeleteTarget({ path: `/sessions/${s.id}`, label: s.title || s.session_date, type: t('session') })}
+      />
+
+      <ArchivedSessionsSection
+        sessions={archivedSessions}
+        onDelete={s => setDeleteTarget({ path: `/sessions/${s.id}`, label: s.title || s.session_date, type: t('archived') })}
+      />
+
+      <ConcurrencyLockModal lock={concurrencyLock} onClose={() => setConcurrencyLock(null)} />
+      <DashboardDeleteModal target={deleteTarget} onConfirm={handleExecuteDelete} onCancel={() => setDeleteTarget(null)} />
 
       {form && (
         <ResourceForm
@@ -165,7 +225,7 @@ export function Dashboard() {
           periods={periods}
           groups={groups}
           close={() => setForm(null)}
-          saved={saved}
+          saved={() => { setForm(null); setNotice(t('created')); reload(); }}
           failed={e => setErr(translateError(e, language))}
         />
       )}
@@ -174,12 +234,15 @@ export function Dashboard() {
         <CsvImportModal
           groups={groups}
           close={() => setShowImport(false)}
-          onSuccess={() => {
-            setShowImport(false);
-            setNotice(t('actionDone'));
-            onStudentsChanged();
-            reload();
-          }}
+          onSuccess={() => { setShowImport(false); setNotice(t('actionDone')); setStudentVersion(v => v + 1); reload(); }}
+        />
+      )}
+
+      {editingSessionId !== null && (
+        <SessionEditorModal
+          sessionId={editingSessionId}
+          onClose={() => setEditingSessionId(null)}
+          onSaved={() => { setNotice(t('sessionUpdatedSuccess')); reload(); }}
         />
       )}
     </Layout>

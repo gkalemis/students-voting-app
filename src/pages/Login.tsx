@@ -8,6 +8,8 @@ import { Brand } from '../types';
 import { BrandHeader } from '../components/BrandHeader';
 import { LanguageButton } from '../components/LanguageButton';
 
+import { safeStorage } from '../utils/storage';
+
 export function Login() {
   const nav = useNavigate();
   const { setUser } = useAuth();
@@ -26,12 +28,17 @@ export function Login() {
     setErr('');
     try {
       const r = await api('/auth/login', json('POST', { username, password }));
-      localStorage.setItem('auth_token', r.access_token);
+      safeStorage.setItem('auth_token', r.access_token);
       setUser(r.user);
       nav(r.user.must_change_password ? '/account' : '/dashboard');
     } catch (e) {
       setErr(translateError(e, language));
     }
+  }
+
+  function fillCreds(u: string, p: string) {
+    setU(u);
+    setP(p);
   }
 
   return (
@@ -69,6 +76,27 @@ export function Login() {
           <button style={{ width: '100%', marginTop: '.5rem' }}>{t('login')}</button>
         </form>
 
+        <div style={{ marginTop: '1.2rem', padding: '.75rem', background: '#f0f4f8', borderRadius: '10px', fontSize: '.84rem', color: '#334e68' }}>
+          <b style={{ display: 'block', marginBottom: '.3rem' }}>🔑 {language === 'el' ? 'Διαπιστευτήρια Δοκιμών (Testing):' : 'Test Credentials:'}</b>
+          <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="secondary"
+              style={{ minHeight: '32px', padding: '.3rem .6rem', fontSize: '.82rem' }}
+              onClick={() => fillCreds('admin', 'admin')}
+            >
+              Admin (admin / admin)
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              style={{ minHeight: '32px', padding: '.3rem .6rem', fontSize: '.82rem' }}
+              onClick={() => fillCreds('lecturer', 'lecturer123')}
+            >
+              Lecturer (lecturer / lecturer123)
+            </button>
+          </div>
+        </div>
       </section>
     </main>
   );

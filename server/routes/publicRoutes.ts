@@ -41,9 +41,9 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
   res.json({
     public_id: s.public_id,
     title: s.title,
-    course: course?.name || '',
-    period: period?.name || '',
-    group: group?.title || '',
+    course: course?.name || s.archive_snapshot?.course_name || '',
+    period: period?.name || s.archive_snapshot?.period_name || '',
+    group: s.group_title || group?.title || s.archive_snapshot?.group_title || '',
     session_date: s.session_date,
     status: s.status,
     lock_new_participants: s.lock_new_participants,
@@ -60,7 +60,9 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
     branding: effectiveBranding(course),
     presentations,
     server_time: new Date().toISOString(),
-    results: s.results_revealed ? calculateResults(s.id) : null
+    results: (s.results_revealed || s.status === 'COMPLETED' || s.status === 'ARCHIVED' || (!currentActiveP && presentations.length > 0 && presentations.every(p => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')))
+      ? (calculateResults(s.id) || s.archive_snapshot?.results)
+      : null
   });
 });
 

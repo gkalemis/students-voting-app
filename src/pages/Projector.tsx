@@ -7,7 +7,7 @@ import { BrandHeader } from '../components/BrandHeader';
 import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
 import { PresentationHeaderCard } from '../components/PresentationHeaderCard';
-import { ResultsTable } from '../components/ResultsTable';
+import { ResultsPodium } from '../components/ResultsPodium';
 
 export function Projector() {
   const { publicId = '' } = useParams();
@@ -17,6 +17,8 @@ export function Projector() {
   if (!s) return <>{t('loading')}</>;
 
   const fullJoinUrl = `${window.location.origin}/join/${s.public_id}`;
+  const allClosed = Boolean(s.presentations && s.presentations.length > 0 && s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES'));
+  const showResults = Boolean(s.results && s.results.length > 0 && !s.active_presentation && (s.results_revealed || s.status === 'COMPLETED' || allClosed));
 
   return (
     <BrandedLayout state={s}>
@@ -38,19 +40,19 @@ export function Projector() {
                 isProjector={true}
                 onExpire={load}
               />
-            ) : s.results_revealed ? (
+            ) : showResults ? (
               <div className="card projector-results-card">
-                <BrandHeader brand={s.branding} isProjector />
+                <BrandHeader brand={s.branding} isProjector={true} />
                 <div className="projector-context-pill">
                   <span className="pres-badge course-badge projector-badge">🎓 {s.course}</span>
                   {s.period && <span className="pres-badge school-badge projector-badge">🏛️ {s.period}</span>}
                   {s.group && <span className="pres-badge dept-badge projector-badge">👥 {s.group}</span>}
                 </div>
-                <ResultsTable rows={s.results} />
+                <ResultsPodium rows={s.results} isProjector={true} />
               </div>
             ) : (
               <div className="card projector-idle-card">
-                <BrandHeader brand={s.branding} isProjector />
+                <BrandHeader brand={s.branding} isProjector={true} />
                 <div className="projector-context-pill">
                   <span className="pres-badge course-badge projector-badge">🎓 {s.course}</span>
                   {s.period && <span className="pres-badge school-badge projector-badge">🏛️ {s.period}</span>}
@@ -60,7 +62,9 @@ export function Projector() {
                   <h1 className="projector-status-heading">
                     {s.status === 'COMPLETED' ? t('sessionCompleted') : t('waitingPresentation')}
                   </h1>
-                  <p className="projector-sub-instruction">{t('autoUpdate')}</p>
+                  <p className="projector-sub-instruction">
+                    {t('autoUpdate')}
+                  </p>
                 </div>
               </div>
             )}

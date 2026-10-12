@@ -74,22 +74,33 @@ export interface Presentation {
   criteria?: Criterion[];
 }
 
+export interface ArchiveSnapshot {
+  group_title: string;
+  course_name: string;
+  period_name?: string;
+  session_date: string;
+  results?: any[];
+  archived_at: string;
+}
+
 export interface PresentationSession {
   id: number;
   public_id: string;
   course_id: number;
   period_id: number;
-  group_id: number;
+  group_id?: number | null;
+  group_title?: string;
   owner_id: number;
   session_date: string;
   title?: string | null;
-  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  status: 'WAITING' | 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
   lock_new_participants: boolean;
   criteria_locked: boolean;
   voting_duration: number;
   is_demo: boolean;
   results_revealed: boolean;
   completed_at?: string | null;
+  archive_snapshot?: ArchiveSnapshot;
 }
 
 export interface ParticipationToken {

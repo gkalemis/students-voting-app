@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
+import { StudentDeleteModal } from './student/StudentDeleteModal';
+import { StudentRosterList } from './student/StudentRosterList';
 
 interface StudentManagerProps {
   groups: any[];
@@ -21,14 +23,9 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [busyDelete, setBusyDelete] = useState(false);
 
-  // Keep groupId in sync with groups whenever groups updates
   useEffect(() => {
     if (!groupId || !groups.some(g => String(g.id) === String(groupId))) {
-      if (groups.length > 0) {
-        setGroup(String(groups[0].id));
-      } else {
-        setGroup('');
-      }
+      setGroup(groups.length > 0 ? String(groups[0].id) : '');
     }
   }, [groups, groupId]);
 
@@ -54,15 +51,10 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!activeGroupId) {
-      setMessage(t('groupFirst'));
-      return;
-    }
+    if (!activeGroupId) return setMessage(t('groupFirst'));
     const studentName = name.trim();
-    if (!studentName) {
-      setMessage(`${t('fullName')}: ${t('required')}`);
-      return;
-    }
+    if (!studentName) return setMessage(`${t('fullName')}: ${t('required')}`);
+
     try {
       await api(`/groups/${activeGroupId}/students`, json('POST', {
         full_name: studentName,
@@ -72,7 +64,6 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
       setSubject('');
       setMessage(t('created'));
       load();
-      // Instantly notify parent dashboard to refresh Course Structure (HierarchyView)
       onStudentsChanged?.();
     } catch (e) {
       setMessage(translateError(e, language));
@@ -87,7 +78,6 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
       setMessage(t('actionDone'));
       setDeleteTarget(null);
       load();
-      // Instantly notify parent dashboard to refresh Course Structure (HierarchyView)
       onStudentsChanged?.();
     } catch (e) {
       setMessage(translateError(e, language));
@@ -106,7 +96,6 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
 
   return (
     <section className="retractable-tool" aria-label={t('manageStudents')}>
-      {/* Retractable Header Bar */}
       <div
         className={`retractable-header ${isRetracted ? 'collapsed' : ''}`}
         onClick={() => setIsRetracted(prev => !prev)}
@@ -144,7 +133,7 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
             className="btn-toggle-retract"
             onClick={() => setIsRetracted(prev => !prev)}
             aria-expanded={!isRetracted}
-            title={isRetracted ? (language === 'el' ? 'Ανάπτυξη εργαλείου' : 'Expand tool') : (language === 'el' ? 'Σύμπτυξη εργαλείου' : 'Collapse tool')}
+            title={isRetracted ? (language === 'el' ? 'Ανάπτυξη' : 'Expand') : (language === 'el' ? 'Σύμπτυξη' : 'Collapse')}
           >
             {isRetracted ? (
               <><span>▼</span> <span>{language === 'el' ? 'Ανάπτυξη' : 'Expand'}</span></>
@@ -155,26 +144,19 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
         </div>
       </div>
 
-      {/* Retracted Summary Indicator */}
       {isRetracted ? (
-        <div
-          className="retractable-collapsed-summary"
-          onClick={() => setIsRetracted(false)}
-          style={{ cursor: 'pointer' }}
-        >
+        <div className="retractable-collapsed-summary" onClick={() => setIsRetracted(false)} style={{ cursor: 'pointer' }}>
           <span>
-            <b>{students.length}</b> {students.length === 1 ? (language === 'el' ? 'φοιτητής' : 'student') : (language === 'el' ? 'φοιτητές' : 'students')} {language === 'el' ? 'στην ομάδα.' : 'in group.'} {language === 'el' ? 'Κάντε κλικ για άνοιγμα & διαχείριση.' : 'Click to expand & manage.'}
+            <b>{students.length}</b> {students.length === 1 ? (language === 'el' ? 'φοιτητής' : 'student') : (language === 'el' ? 'φοιτητές' : 'students')} {language === 'el' ? 'στην ομάδα.' : 'in group.'}
           </span>
           <span style={{ color: 'var(--accent)', fontWeight: 650, fontSize: '0.82rem' }}>
             {language === 'el' ? 'Άνοιγμα ▾' : 'Expand ▾'}
           </span>
         </div>
       ) : (
-        /* Expanded Retractable Tool Body */
         <div className="retractable-body">
           {message && <p className="notice" style={{ margin: '0 0 .5rem 0' }}>{message}</p>}
 
-          {/* Group Selector */}
           <label style={{ marginBottom: 0 }}>
             {t('group')}
             <select value={activeGroupId} onChange={e => setGroup(e.target.value)}>
@@ -184,7 +166,6 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
             </select>
           </label>
 
-          {/* Add Student Inline Form */}
           <form className="card form-grid" onSubmit={add} style={{ margin: 0, padding: '1rem' }}>
             <label style={{ margin: 0 }}>
               {t('fullName')}
@@ -210,7 +191,6 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
             </div>
           </form>
 
-          {/* Student Roster Viewport with Scroll Containment */}
           <div className="student-roster-wrap">
             <div className="student-roster-toolbar">
               <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#334155' }}>
@@ -228,68 +208,21 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
               )}
             </div>
 
-            {filteredStudents.length > 0 ? (
-              <div className="student-roster-scroll">
-                {filteredStudents.map(x => (
-                  <div className="student-row-compact" key={x.id}>
-                    <div className="student-info">
-                      <span className="student-name">{x.full_name}</span>
-                      {x.presentation_title && (
-                        <span className="student-topic" title={x.presentation_title}>
-                          «{x.presentation_title}»
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      className="danger btn-student-delete"
-                      onClick={() => setDeleteTarget(x)}
-                      title={t('delete')}
-                    >
-                      🗑️ {t('delete')}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem', background: '#f8fafc', borderRadius: 8 }}>
-                {searchQuery
-                  ? (language === 'el' ? 'Δεν βρέθηκαν φοιτητές με αυτή την αναζήτηση.' : 'No students found matching search.')
-                  : (language === 'el' ? 'Δεν υπάρχουν ακόμη φοιτητές σε αυτή την ομάδα. Προσθέστε παραπάνω ή εισαγάγετε με CSV.' : 'No students in this group yet. Add above or import via CSV.')}
-              </div>
-            )}
+            <StudentRosterList
+              students={filteredStudents}
+              searchQuery={searchQuery}
+              onDelete={setDeleteTarget}
+            />
           </div>
         </div>
       )}
 
-      {/* Confirmation Modal for Student Deletion */}
-      {deleteTarget && (
-        <div className="modal" role="dialog" aria-modal="true">
-          <div className="card" style={{ maxWidth: 440 }}>
-            <h2>🗑️ {t('confirmDelete')}</h2>
-            <p style={{ margin: '.8rem 0' }}>
-              <b>{deleteTarget.full_name}</b> {deleteTarget.presentation_title ? `(«${deleteTarget.presentation_title}»)` : ''}
-            </p>
-            <div className="actions" style={{ marginTop: '1.2rem', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                className="secondary"
-                disabled={busyDelete}
-                onClick={() => setDeleteTarget(null)}
-              >
-                {t('cancel')}
-              </button>
-              <button
-                className="danger"
-                disabled={busyDelete}
-                onClick={executeRemove}
-              >
-                {t('delete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StudentDeleteModal
+        target={deleteTarget}
+        busy={busyDelete}
+        onConfirm={executeRemove}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </section>
   );
 }

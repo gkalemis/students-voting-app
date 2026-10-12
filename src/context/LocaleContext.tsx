@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Language, translations, TranslationKey } from '../i18n';
+import { safeStorage } from '../utils/storage';
 
 interface LocaleContextType {
   language: Language;
@@ -19,12 +20,12 @@ export const useT = () => useContext(LocaleContext);
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [language, setLangState] = useState<Language>(() => {
-    return (localStorage.getItem('language') as Language) === 'en' ? 'en' : 'el';
+    return (safeStorage.getItem('language') as Language) === 'en' ? 'en' : 'el';
   });
 
   useEffect(() => {
     document.documentElement.lang = language;
-    localStorage.setItem('language', language);
+    safeStorage.setItem('language', language);
 
     // Ensure all uppercase UI containers (tables, pills, badges, meta tags)
     // always carry lang="el" so the browser's CSS text-transform engine applies

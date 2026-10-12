@@ -27,6 +27,9 @@ Current release candidate: 2.4.0
 - Added a remote-synchronization deployment guard: `deploy.sh` fetches the current branch's configured upstream and proceeds only when both commits match exactly. Behind, ahead, and diverged states stop before Docker activity and print specific review/remediation information; the script still never pulls or pushes automatically.
 - Made deployment `.env` parsing tolerant of optional leading whitespace and spaces around assignment operators after a correctly populated `PUBLIC_BASE_URL` was accepted by Compose but rejected by the script's stricter parser. The local key formatting was normalized without exposing its value.
 - Full production execution of `./deploy.sh` passed on 2026-10-10: local `main` and `origin/main` matched at `7d32391`, the TypeScript/Vite image build passed, the script created and verified `backups/pre-deploy-20261010-151225/data.tar.gz`, recreated `voting-app`, reached healthy status, passed public HTTPS/header and port-isolation checks, and ran image `sha256:ed8c8fcd0b9195fddcec28010d9b69c9f79d2104f3c0a5e5a615072ffedc0df9`.
+- Preserved the 2026-10-12 AI Studio ZIP unchanged at `backups/aistudio-working-20261012/students-voting-app.zip` (SHA-256 `d8ae495f3ff78f24b4057f72425877bc37e3359690f1dd13bdcc6017c8d70952`) and extracted its 134-file working copy under the same ignored backup directory.
+- Integrated the complete AI Studio product/UI work: modular responsive styles and components, error boundary, enhanced dashboard workflow, session editor and controls, CSV/student tooling, result podium/projector updates, automatic voting countdown behavior, persistent client preferences, WAITING-session lifecycle, archive snapshots, quick presenter management, and lecturer-scoped academic/student resources.
+- Reconciled the AI Studio backend with the hardened deployment instead of importing unsafe regressions. Existing environment-only secrets, generated administrator credentials, login throttling, password rules, host/origin/WebSocket validation, upload validation, Traefik isolation, and absolute public URLs remain intact. Added ownership enforcement to every presentation control, hierarchy validation to session creation, cross-group student deletion protection, bounded input/timer values, and persistent timer closure.
 
 ## Completed
 
@@ -94,9 +97,12 @@ Current release candidate: 2.4.0
 - Traefik discovery after container recreation briefly returned 404, then converged without configuration changes; inspection confirmed the intended external network and service port label.
 - The pre-migration and first post-migration backup commands failed before executing due to pasted Python indentation; the corrected pipeline then created and verified `/data/voting-post-2.4.0.db` successfully. Both the live database and backup were 172 KB, and the backup is owned by the container application account.
 - Version 2.4.0 commit/push was authorized, but this Codex sandbox could not create `.git/index.lock` because `.git` is mounted read-only. Repository sanitization and `git diff --check` passed; the host operator must run the documented Git commands.
+- AI Studio integration static validation: `git diff --check` PASS; all relative TypeScript/CSS imports resolve; changed source files satisfy the 250-line maintenance ceiling; scans found no imported default credentials, fallback secrets, deployment domains, or private addresses.
+- AI Studio integration TypeScript/Vite and Docker build: BLOCKED in this Codex session because dependencies are not installed and the sandbox cannot access `/var/run/docker.sock`; the operator must run `docker compose build voting-app` before any deployment.
 
 ## Unresolved/next steps
 
+- Run `docker compose build voting-app`; if it passes, review the diff and commit it. Do not run `./deploy.sh` until the new image and manual disposable-data workflow checks pass.
 - On a network-enabled development host, install dependencies and run the exact commands in `TESTING.md`; correct any runtime or type-check issue they reveal.
 - Run `docker compose build web` and the frontend test suite to validate the new bilingual UI before deployment; do not replace the running container until the build passes.
 - Rebuild both images and validate migration `0003`, hierarchical creation, student management, countdowns, logo/background/theme persistence, and each cascading deletion level against disposable sample records before release.

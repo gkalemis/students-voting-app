@@ -4,11 +4,12 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
-import { BrandHeader } from '../components/BrandHeader';
 import { UserForm, LogoUpload } from '../components/AdminForms';
 import { ResetPasswordModal, DeleteUserModal } from '../components/AdminModals';
 import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
-import { BrandingFields } from '../components/BrandingFields';
+import { UserCard } from '../components/admin/UserCard';
+import { ResetDbModal } from '../components/admin/ResetDbModal';
+import { getBrandingText } from '../utils/branding';
 
 export function Admin() {
   const { user: currentUser } = useAuth();
@@ -85,103 +86,125 @@ export function Admin() {
         <h2>{t('users')}</h2>
         <div className="list">
           {users.map(u => (
-            <div className="user-card" key={u.id}>
-              <div className="user-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
-                  <b style={{ fontSize: '1.05rem', color: '#0f172a' }}>{u.full_name}</b>
-                  <span style={{ color: '#64748b', fontSize: '.88rem' }}>({u.username})</span>
-                </div>
-                <div className="user-badges">
-                  <span className={`badge-role ${u.role === 'ADMIN' ? 'admin' : ''}`}>
-                    {u.role === 'ADMIN' ? `🛡️ ${t('admin')}` : `🎓 ${t('lecturer')}`}
-                  </span>
-                  <span className={`badge-status ${u.active ? 'active' : 'inactive'}`}>
-                    {u.active ? `● ${t('active')}` : `○ ${t('inactive')}`}
-                  </span>
-                  {u.must_change_password && (
-                    <span className="badge-must-change" title={t('mustChangeNextLogin')}>
-                      ⚠️ {t('mustChangeNextLogin')}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={u.id === currentUser?.id}
-                  onClick={() => toggleUser(u)}
-                  title={u.id === currentUser?.id ? t('cannotDeactivateSelf') : ''}
-                >
-                  {u.active ? t('deactivate') : t('reactivate')}
-                </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => { setError(''); setResetTarget(u); }}
-                  title={t('resetPasswordTitle')}
-                >
-                  🔑 {t('resetPassword')}
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  disabled={u.id === currentUser?.id}
-                  onClick={() => { setError(''); setDeleteTarget(u); }}
-                  title={u.id === currentUser?.id ? t('cannotDeleteSelf') : ''}
-                >
-                  🗑️ {t('delete')}
-                </button>
-              </div>
-            </div>
+            <UserCard
+              key={u.id}
+              user={u}
+              currentUserId={currentUser?.id || 0}
+              onToggle={toggleUser}
+              onReset={setResetTarget}
+              onDelete={setDeleteTarget}
+            />
           ))}
         </div>
       </section>
 
-      <AdminRemovalPanel users={users} reloadUsers={load} />
+      {/* Global Academic Branding Settings */}
+      <section style={{ margin: '2rem 0' }}>
+        <h2>🏛️ {t('academicBranding')}</h2>
+        <p style={{ color: '#555', fontSize: '.9rem', margin: '0 0 1rem 0' }}>
+          {language === 'el'
+            ? 'Ορίστε τα επίσημα στοιχεία του ιδρύματος και το λογότυπο που θα εμφανίζονται σε όλες τις προβολές.'
+            : 'Set the official university branding and logo that appears across all views.'}
+        </p>
 
-      <h2>{t('branding')}</h2>
-      <LogoUpload
-        saved={x => { setBrand(x); setMessage(t('logoUploaded')); }}
-        failed={e => setError(translateError(e, language))}
-      />
+        <div className="card" style={{ maxWidth: 640 }}>
+          <form onSubmit={async e => {
+            e.preventDefault();
+            setError('');
+            try {
+              await api('/branding', json('PUT', brand));
+              setMessage(t('brandingUpdated'));
+              load();
+            } catch (err) {
+              setError(translateError(err, language));
+            }
+          }}>
+            <LogoUpload
+              saved={b => { setBrand(b); setMessage(t('brandingUpdated')); }}
+              failed={e => setError(translateError(e, language))}
+            />
 
-      <form
-        className="card form-grid"
-        onSubmit={async e => {
-          e.preventDefault();
-          setError('');
-          try {
-            await api('/branding', json('PUT', brand));
-            setMessage(t('saved'));
-          } catch (e) {
-            setError(translateError(e, language));
-          }
-        }}
-      >
-        <BrandingFields brand={brand} setBrand={setBrand} />
-        <div style={{ gridColumn: '1 / -1' }}>
-          <button>{t('save')}</button>
+            <label>
+              {language === 'el' ? 'Όνομα Ιδρύματος (Ελληνικά)' : 'University Name (Greek)'}
+              <input
+                value={getBrandingText(brand.university_name, 'el')}
+                onChange={e => setBrand({
+                  ...brand,
+                  university_name: {
+                    el: e.target.value,
+                    en: getBrandingText(brand.university_name, 'en')
+                  }
+                })}
+              />
+            </label>
+
+            <label>
+              {language === 'el' ? 'Όνομα Ιδρύματος (English)' : 'University Name (English)'}
+              <input
+                value={getBrandingText(brand.university_name, 'en')}
+                onChange={e => setBrand({
+                  ...brand,
+                  university_name: {
+                    el: getBrandingText(brand.university_name, 'el'),
+                    en: e.target.value
+                  }
+                })}
+              />
+            </label>
+
+            <label>
+              {language === 'el' ? 'Όνομα Σχολής / Τμήματος (Ελληνικά)' : 'Faculty / School Name (Greek)'}
+              <input
+                value={getBrandingText(brand.school_name, 'el')}
+                onChange={e => setBrand({
+                  ...brand,
+                  school_name: {
+                    el: e.target.value,
+                    en: getBrandingText(brand.school_name, 'en')
+                  }
+                })}
+              />
+            </label>
+
+            <label>
+              {language === 'el' ? 'Όνομα Σχολής / Τμήματος (English)' : 'Faculty / School Name (English)'}
+              <input
+                value={getBrandingText(brand.school_name, 'en')}
+                onChange={e => setBrand({
+                  ...brand,
+                  school_name: {
+                    el: getBrandingText(brand.school_name, 'el'),
+                    en: e.target.value
+                  }
+                })}
+              />
+            </label>
+
+            <div style={{ marginTop: '1rem' }}>
+              <button type="submit">{t('saveBranding')}</button>
+            </div>
+          </form>
         </div>
-        <div className="preview">
-          <BrandHeader brand={brand} />
-        </div>
-      </form>
+      </section>
 
-      <section style={{ margin: '2.5rem 0', padding: '1.75rem', background: '#fff', border: '1px solid #fecaca', borderRadius: '14px', boxShadow: '0 4px 12px #dc26260a' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#dc2626' }}>⚠️</div>
+      {/* Global Academic Periods & Academic Structure Cascade Removal Panel */}
+      <AdminRemovalPanel reloadUsers={load} />
+
+      {/* Danger Zone */}
+      <section style={{ margin: '3rem 0 1.5rem 0', borderTop: '2px dashed #fca5a5', paddingTop: '1.5rem' }}>
+        <h2 style={{ color: '#b91c1c' }}>⚠️ {t('dangerZone')}</h2>
+        <div className="card" style={{ borderLeft: '4px solid #ef4444', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h2 style={{ color: '#991b1b', margin: 0, fontSize: '1.15rem' }}>{t('resetDatabase')}</h2>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', margin: 0 }}>{t('resetDatabasePrompt')}</p>
+            <b style={{ color: '#991b1b', fontSize: '1.05rem' }}>{t('resetDatabase')}</b>
+            <p style={{ margin: '.3rem 0 0 0', color: '#666', fontSize: '.9rem' }}>
+              {t('resetDatabaseWarning')}
+            </p>
           </div>
-        </div>
-        <div style={{ marginTop: '1.25rem' }}>
           <button
             type="button"
             className="danger"
             onClick={() => setShowResetDbModal(true)}
-            style={{ padding: '0.65rem 1.25rem', fontWeight: 700 }}
+            style={{ fontWeight: 600 }}
           >
             🗑️ {t('resetDatabase')}
           </button>
@@ -200,51 +223,25 @@ export function Admin() {
         <ResetPasswordModal
           user={resetTarget}
           close={() => setResetTarget(null)}
-          done={() => {
-            setResetTarget(null);
-            setMessage(t('resetPasswordSuccess'));
-            load();
-          }}
-          failed={(e: any) => setError(translateError(e, language))}
+          done={() => { setMessage(t('resetPasswordSuccess')); setResetTarget(null); load(); }}
+          failed={e => setError(translateError(e, language))}
         />
       )}
 
       {deleteTarget && (
         <DeleteUserModal
           user={deleteTarget}
+          busy={busyDelete}
           close={() => setDeleteTarget(null)}
           confirmDelete={handleDeleteUser}
-          busy={busyDelete}
         />
       )}
 
-      {showResetDbModal && (
-        <div className="modal" role="dialog" aria-modal="true" onClick={() => setShowResetDbModal(false)}>
-          <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px', padding: '2rem', borderRadius: '16px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-              <div style={{ width: '56px', height: '56px', margin: '0 auto 1rem auto', borderRadius: '50%', background: '#fef2f2', border: '2px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>
-                ⚠️
-              </div>
-              <h3 style={{ color: '#991b1b', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.5rem 0' }}>{t('resetDatabase')}</h3>
-              <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.5', margin: 0 }}>
-                {t('confirmResetDb')}
-              </p>
-            </div>
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.5rem', color: '#b45309', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: '0.5rem', textAlign: 'left' }}>
-              <span>⚠️</span>
-              <span>{t('resetDatabasePrompt')}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button type="button" className="secondary" onClick={() => setShowResetDbModal(false)} style={{ padding: '0.6rem 1.2rem' }}>
-                {t('cancel')}
-              </button>
-              <button type="button" className="danger" onClick={handleResetDb} style={{ padding: '0.6rem 1.4rem', fontWeight: 700 }}>
-                🗑️ {t('resetDatabase')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResetDbModal
+        show={showResetDbModal}
+        onConfirm={handleResetDb}
+        onCancel={() => setShowResetDbModal(false)}
+      />
     </Layout>
   );
 }

@@ -6,30 +6,34 @@ import { translateError } from '../i18n';
 import { BrandHeader } from '../components/BrandHeader';
 import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
-import { PresentationHeaderCard } from '../components/PresentationHeaderCard';
+import { VotingCountdown } from '../components/VotingCountdown';
 import { usePublic } from '../hooks/usePublic';
 import { WaitingQueue } from '../components/WaitingQueue';
+import { ResultsPodium } from '../components/ResultsPodium';
+import { safeStorage } from '../utils/storage';
 
 export function Join() {
   const { publicId = '' } = useParams();
   const { t, language } = useT();
   const [s, load] = usePublic(publicId);
   const [scores, setScores] = useState<Record<number, number>>({});
-  const [inputMode, setInputMode] = useState<'numbers' | 'dropdown'>('numbers');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; title: string; subtitle?: string } | null>(null);
   const [pt, setPt] = useState('');
   const [isModified, setIsModified] = useState(false);
 
   useEffect(() => {
     const key = `vote_token_${publicId}`;
-    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    let saved: any = null;
+    try {
+      saved = JSON.parse(safeStorage.getItem(key) || 'null');
+    } catch {}
     if (saved && new Date(saved.expires_at) > new Date()) {
       setPt(saved.token);
     } else {
-      localStorage.removeItem(key);
+      safeStorage.removeItem(key);
       api(`/public/sessions/${publicId}/tokens`, json('POST'))
         .then(x => {
-          localStorage.setItem(key, JSON.stringify(x));
+          safeStorage.setItem(key, JSON.stringify(x));
           setPt(x.token);
         })
         .catch(e => setToast({ type: 'error', title: translateError(e, language) }));
@@ -49,7 +53,25 @@ export function Join() {
 
   if (!s) return <main className="center">{t('loading')}</main>;
 
+  const triggerHaptic = (pattern: number | number[]) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(pattern);
+      } catch {
+        // Ignored if vibration is disabled or unsupported
+      }
+    }
+  };
+
+  const handleScoreChange = (criterionId: number, val: number) => {
+    triggerHaptic(15);
+    setScores(prev => ({ ...prev, [criterionId]: val }));
+    setIsModified(true);
+  };
+
   async function submit() {
+    triggerHaptic([40, 30, 40]);
+
     try {
       await api(`/public/sessions/${publicId}/vote`, {
         ...json('PUT', { scores }),
@@ -75,120 +97,124 @@ export function Join() {
   const gradedCount = Object.keys(scores).length;
   const allGraded = gradedCount === s.criteria.length;
 
+  const allClosed = Boolean(
+    s.presentations &&
+    s.presentations.length > 0 &&
+    s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')
+  );
+
+  const showResults = Boolean(
+    s.results &&
+    s.results.length > 0 &&
+    !s.active_presentation &&
+    (s.results_revealed || s.status === 'COMPLETED' || allClosed)
+  );
+
   return (
     <BrandedLayout state={s}>
       <main className="mobile">
-        <div className="public-tools"><LanguageButton /></div>
-        
-        {/* If no presentation is active, show the institution header */}
-        {!s.active_presentation && <BrandHeader brand={s.branding} />}
-
         {s.active_presentation ? (
-          <div className="grading-flow">
-            {/* Presentation Hero Card: clearly showcases Logo, University, School, Department, Presenter name, and live Timer */}
-            <PresentationHeaderCard
-              brand={s.branding}
-              courseName={s.course}
-              periodName={s.period}
-              groupTitle={s.group}
-              presenterName={s.active_presentation.presenter_name}
-              presentationTitle={s.active_presentation.title}
-              closesAt={s.active_presentation.closes_at}
-              onExpire={load}
-            />
-
-            <section className="card grading-section">
-              {/* Input mode toggle: colorful numbers 1-5 vs dropdown */}
-              <div className="grading-control-bar">
-                <b className="grading-categories-heading">{t('gradeCategories')}</b>
-                <div className="mode-toggle" role="group" aria-label={t('inputMode')}>
-                  <button
-                    type="button"
-                    className={inputMode === 'numbers' ? 'active' : ''}
-                    onClick={() => setInputMode('numbers')}
-                  >
-                    {t('numbersMode')}
-                  </button>
-                  <button
-                    type="button"
-                    className={inputMode === 'dropdown' ? 'active' : ''}
-                    onClick={() => setInputMode('dropdown')}
-                  >
-                    {t('dropdownMode')}
-                  </button>
+          /* ========================================================
+             SINGLE-SCREEN MOBILE VOTING EXPERIENCE
+             ======================================================== */
+          <div className="mobile-voting-viewport">
+            {/* Ultra-compact sticky top bar with student name and countdown timer */}
+            <header className="mobile-compact-topbar">
+              <div className="mobile-compact-left">
+                <span className="mobile-compact-avatar" aria-hidden="true">👤</span>
+                <div className="mobile-compact-info">
+                  <h2 className="mobile-compact-name">{s.active_presentation.presenter_name}</h2>
+                  {s.active_presentation.title && (
+                    <span className="mobile-compact-title" title={s.active_presentation.title}>
+                      {s.active_presentation.title}
+                    </span>
+                  )}
                 </div>
               </div>
+              <div className="mobile-compact-right">
+                <VotingCountdown
+                  closesAt={s.active_presentation.closes_at}
+                  onExpire={load}
+                  isCompact={true}
+                />
+                <LanguageButton />
+              </div>
+            </header>
 
-              {/* Categories */}
-              {s.criteria.map((c, idx) => {
+            {/* Dense evaluation criteria (fits on one screen) */}
+            <div className="mobile-compact-body">
+              {s.criteria.map((c) => {
                 const currentVal = scores[c.id];
                 return (
-                  <div key={c.id} className={`category-card category-card-${(idx % 4) + 1}`}>
-                    <div className="category-header">
-                      <h3>{c.name}</h3>
-                      <span className="category-weight">{c.weight}%</span>
+                  <div key={c.id} className="mobile-compact-criterion">
+                    <div className="mobile-criterion-header">
+                      <span className="mobile-criterion-name">{c.name}</span>
+                      <span className="mobile-criterion-weight">{c.weight}%</span>
                     </div>
 
-                    {inputMode === 'numbers' ? (
-                      <div className="ratings">
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <label key={n} className={`rating-btn rating-btn-${n} ${currentVal === n ? 'selected' : ''}`}>
-                            <input
-                              type="radio"
-                              name={`c${c.id}`}
-                              checked={currentVal === n}
-                              onChange={() => {
-                                setScores({ ...scores, [c.id]: n });
-                                setIsModified(true);
-                              }}
-                            />
+                    <div className="mobile-rating-buttons" role="radiogroup" aria-label={c.name}>
+                      {[1, 2, 3, 4, 5].map(n => {
+                        const isSelected = currentVal === n;
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={`mobile-rating-btn rating-val-${n} ${isSelected ? 'selected' : ''}`}
+                            onClick={() => handleScoreChange(c.id, n)}
+                          >
                             <span className="rating-digit">{n}</span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <select
-                        className="category-select"
-                        value={currentVal || ''}
-                        onChange={e => {
-                          const val = Number(e.target.value);
-                          if (val >= 1 && val <= 5) {
-                            setScores({ ...scores, [c.id]: val });
-                            setIsModified(true);
-                          }
-                        }}
-                      >
-                        <option value="">-- {t('selectGrade')} --</option>
-                        <option value="1">{t('scorePoor')}</option>
-                        <option value="2">{t('scoreFair')}</option>
-                        <option value="3">{t('scoreGood')}</option>
-                        <option value="4">{t('scoreVeryGood')}</option>
-                        <option value="5">{t('scoreExcellent')}</option>
-                      </select>
-                    )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
+            </div>
 
-              {/* Progress summary & submit */}
-              <div className="progress-summary">
-                <span className="progress-counter-text">
-                  📊 {gradedCount} / {s.criteria.length} {t('gradesCompleted')}
+            {/* Compact bottom bar with progress status and high-visibility submit */}
+            <footer className="mobile-compact-footer">
+              <div className="mobile-footer-status">
+                <span className="mobile-progress-text">
+                  📊 {gradedCount}/{s.criteria.length} {t('gradesCompleted')}
                 </span>
-                {allGraded && <span className="progress-complete-badge">✓ {t('actionDone')}</span>}
+                {allGraded && <span className="mobile-progress-badge">✓ {t('actionDone')}</span>}
               </div>
 
               <button
-                className={`submit-btn-large ${isModified ? 'submit-btn-blinking' : ''}`}
+                type="button"
+                className={`mobile-submit-btn ${!allGraded || !pt ? 'disabled' : ''} ${isModified ? 'pulse' : ''}`}
                 disabled={!pt || !allGraded}
                 onClick={submit}
               >
                 {t('submitRating')}
               </button>
-            </section>
+            </footer>
+          </div>
+        ) : showResults ? (
+          /* ========================================================
+             FINAL RESULTS PODIUM (SHOWN AUTOMATICALLY ON CLOSE/COMPLETE)
+             ======================================================== */
+          <div className="mobile-results-container">
+            <div className="public-tools" style={{ marginBottom: '0.75rem' }}>
+              <LanguageButton />
+            </div>
+            <BrandHeader brand={s.branding} />
+            <ResultsPodium rows={s.results} isProjector={false} />
           </div>
         ) : (
-          <WaitingQueue s={s} />
+          /* ========================================================
+             IDLE / WAITING FOR NEXT PRESENTATION
+             ======================================================== */
+          <div className="mobile-idle-container">
+            <div className="public-tools" style={{ marginBottom: '0.75rem' }}>
+              <LanguageButton />
+            </div>
+            <BrandHeader brand={s.branding} />
+            <WaitingQueue s={s} />
+          </div>
         )}
 
         {toast && (

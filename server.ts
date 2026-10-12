@@ -16,6 +16,7 @@ import { publicRouter } from './server/routes/publicRoutes';
 import { exportRouter } from './server/routes/exportRoutes';
 import { brandingRouter, ASSETS_DIR } from './server/routes/brandingRoutes';
 import { importRouter } from './server/routes/importRoutes';
+import { studentRouter } from './server/routes/studentRoutes';
 import { config } from './server/config';
 
 const PORT = config.port;
@@ -147,6 +148,7 @@ app.use('/api', publicRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api', academicRouter);
+app.use('/api', studentRouter);
 app.use('/api', sessionRouter);
 app.use('/api', presentationRouter);
 app.use('/api', exportRouter);

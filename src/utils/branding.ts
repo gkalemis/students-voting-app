@@ -1,7 +1,7 @@
-type LocalizedBranding = string | { el: string; en: string } | undefined;
-
-export function getBrandingText(value: LocalizedBranding, language: string): string {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  return value[language as keyof typeof value] || value.el || value.en || '';
+export function getBrandingText(val: any, language: string): string {
+  if (!val) return '';
+  if (typeof val === 'object' && val !== null) {
+    return val[language] || val['el'] || val['en'] || '';
+  }
+  return String(val);
 }

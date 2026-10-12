@@ -102,18 +102,19 @@ export function LogoUpload({
   }
 
   return (
-    <form className="card" onSubmit={upload}>
+    <div style={{ marginBottom: '1.2rem', padding: '1rem', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
       <label>
         {t('logo')}
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp"
           onChange={e => setFile(e.target.files?.[0])}
-          required
         />
       </label>
-      <button>{t('uploadLogo')}</button>
-    </form>
+      <button type="button" disabled={!file} onClick={upload} style={{ marginTop: '.6rem' }}>
+        {t('uploadLogo')}
+      </button>
+    </div>
   );
 }
 

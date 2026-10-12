@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useT } from '../context/LocaleContext';
 
-export function VotingCountdown({ closesAt, totalDuration = 60, onExpire }: { closesAt?: string; totalDuration?: number; onExpire?: () => void }) {
+export function VotingCountdown({ closesAt, totalDuration = 60, onExpire, isCompact = false }: { closesAt?: string; totalDuration?: number; onExpire?: () => void; isCompact?: boolean }) {
   const { t } = useT();
   const [seconds, setSeconds] = useState(0);
   const [initialDiff, setInitialDiff] = useState(totalDuration);
@@ -36,10 +36,22 @@ export function VotingCountdown({ closesAt, totalDuration = 60, onExpire }: { cl
 
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const timeFormatted = `${mins > 0 ? `${mins}:` : ''}${secs < 10 && mins > 0 ? `0${secs}` : secs} ${t('seconds')}`;
-  const percent = initialDiff > 0 ? Math.min(100, Math.max(0, (seconds / initialDiff) * 100)) : 0;
   const isUrgent = seconds <= 15 && seconds > 0;
   const isExpired = seconds === 0;
+
+  if (isCompact) {
+    return (
+      <div className={`timer-compact-pill ${isUrgent ? 'timer-urgent' : ''}`} role="timer" aria-live="polite">
+        <span className="timer-icon" aria-hidden="true">⏱️</span>
+        <span className="timer-digits font-mono">
+          {isExpired ? t('timeUp') : `${mins > 0 ? `${mins}:` : ''}${secs < 10 && mins > 0 ? `0${secs}` : secs}s`}
+        </span>
+      </div>
+    );
+  }
+
+  const timeFormatted = `${mins > 0 ? `${mins}:` : ''}${secs < 10 && mins > 0 ? `0${secs}` : secs} ${t('seconds')}`;
+  const percent = initialDiff > 0 ? Math.min(100, Math.max(0, (seconds / initialDiff) * 100)) : 0;
 
   return (
     <div className="timer-banner" role="timer" aria-live="polite">

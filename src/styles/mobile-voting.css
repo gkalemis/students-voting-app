@@ -1,0 +1,157 @@
+/* =========================================================
+   SINGLE-SCREEN MOBILE VOTING INTERFACE
+   ========================================================= */
+
+.mobile-voting-viewport {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 1rem;
+}
+
+/* Compact Sticky Top Bar */
+.mobile-compact-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
+  margin-bottom: 0.5rem;
+  backdrop-filter: blur(8px);
+}
+
+.mobile-compact-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-compact-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.mobile-compact-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.mobile-compact-name {
+  font-size: 0.95rem !important;
+  font-weight: 850 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-compact-title {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.mobile-compact-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* Compact Countdown Pill */
+.timer-compact-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 99px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.timer-compact-pill.timer-urgent {
+  background: #ef4444 !important;
+  border-color: #f87171 !important;
+  animation: pulse-urgent 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-urgent {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+  100% { transform: scale(1.05); box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
+}
+
+/* Compact Criteria Section */
+.mobile-compact-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
+}
+
+.mobile-compact-criterion {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease;
+}
+
+.mobile-compact-criterion:focus-within {
+  border-color: #3b82f6;
+}
+
+.mobile-criterion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.mobile-criterion-name {
+  font-size: 0.86rem;
+  font-weight: 750;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.mobile-criterion-weight {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+

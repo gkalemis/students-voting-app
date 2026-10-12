@@ -10,7 +10,9 @@ export interface Brand {
 }
 
 export interface Result {
+  presentation_id?: number;
   presenter_name: string;
+  title?: string;
   vote_count: number;
   weighted_score?: number;
   rank?: number;
@@ -67,6 +69,28 @@ export interface PresentationItem {
   status: string;
   vote_count: number;
   criteria?: CriterionItem[];
+}
+
+export interface SessionItem {
+  id: number;
+  public_id: string;
+  title?: string | null;
+  session_date: string;
+  status: 'WAITING' | 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  is_demo?: boolean;
+  course_id?: number;
+  course_name?: string;
+  group_id?: number;
+  group_title?: string;
+  owner_id?: number;
+  archive_snapshot?: {
+    group_title: string;
+    course_name: string;
+    period_name?: string;
+    session_date: string;
+    results?: Result[];
+    archived_at: string;
+  };
 }
 
 export type FormKind = 'course' | 'period' | 'group' | 'session' | null;

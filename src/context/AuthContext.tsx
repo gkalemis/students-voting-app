@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api, token } from '../api';
 import { User } from '../types';
 import { applyThemeColor } from '../theme';
+import { safeStorage } from '../utils/storage';
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (u?.theme_color) applyThemeColor(u.theme_color);
         })
         .catch(() => {
-          localStorage.removeItem('auth_token');
+          safeStorage.removeItem('auth_token');
           setUser(null);
         })
         .finally(() => setReady(true));
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
+    safeStorage.removeItem('auth_token');
     setUser(null);
   };
 

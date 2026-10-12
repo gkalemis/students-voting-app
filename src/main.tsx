@@ -4,19 +4,21 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { LocaleProvider } from './context/LocaleContext';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles.css';
 import './extras.css';
-import './projector.css';
 
 const container = document.getElementById('root');
 if (container) {
   createRoot(container).render(
-    <BrowserRouter>
-      <LocaleProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </LocaleProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <LocaleProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </LocaleProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

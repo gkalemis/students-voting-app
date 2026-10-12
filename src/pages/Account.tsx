@@ -5,6 +5,7 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
+import { safeStorage } from '../utils/storage';
 
 export function Account() {
   const { user, setUser } = useAuth();
@@ -24,7 +25,7 @@ export function Account() {
     }
     try {
       const result = await api('/auth/password', json('PUT', { current_password: current, new_password: next }));
-      localStorage.setItem('auth_token', result.access_token);
+      safeStorage.setItem('auth_token', result.access_token);
       setUser({ ...user!, must_change_password: false });
       setMessage(t('passwordChanged'));
       setTimeout(() => nav('/dashboard'), 700);
@@ -36,7 +37,8 @@ export function Account() {
   return (
     <Layout>
       <section className="card login" style={{ margin: 'auto' }}>
-        <h1>{t('changePassword')}</h1>
+        <h1>{user?.must_change_password ? t('mandatoryPassword') : t('changePassword')}</h1>
+        {user?.must_change_password && <p>{t('temporaryReplace')}</p>}
 
         <form onSubmit={submit}>
           <label>

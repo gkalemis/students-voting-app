@@ -9,7 +9,7 @@ export const db = {
   users: [] as User[],
   globalBranding: {
     university_name: {
-      el: 'Εθνικό Μετσόβιο Πολυτεχνείο',
+      el: 'Εθνικό Μετσόβειο Πολυτεχνείο',
       en: 'National Technical University of Athens'
     },
     school_name: {
@@ -176,6 +176,15 @@ export function calculateResults(sessionId: number) {
     ranked[i].rank = rank;
     previousScore = ranked[i].weighted_score;
   }
+
+  output.sort((a, b) => {
+    if (a.rank !== undefined && b.rank !== undefined) {
+      return a.rank - b.rank;
+    }
+    if (a.rank !== undefined) return -1;
+    if (b.rank !== undefined) return 1;
+    return (b.weighted_score || 0) - (a.weighted_score || 0);
+  });
 
   return output;
 }

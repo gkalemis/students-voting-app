@@ -1,0 +1,128 @@
+/* Touch-Optimized Rating Buttons (1 to 5) */
+.mobile-rating-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+}
+
+.mobile-rating-btn {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  cursor: pointer;
+  transition: all 0.12s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0 !important;
+}
+
+.mobile-rating-btn:hover {
+  border-color: #94a3b8 !important;
+  transform: translateY(-1px);
+}
+
+.mobile-rating-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* Rating Color Schemes when selected */
+.mobile-rating-btn.rating-val-1.selected {
+  background: #ef4444 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.35) !important;
+}
+.mobile-rating-btn.rating-val-2.selected {
+  background: #f97316 !important;
+  border-color: #c2410c !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(249, 115, 22, 0.35) !important;
+}
+.mobile-rating-btn.rating-val-3.selected {
+  background: #f59e0b !important;
+  border-color: #b45309 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35) !important;
+}
+.mobile-rating-btn.rating-val-4.selected {
+  background: #10b981 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.35) !important;
+}
+.mobile-rating-btn.rating-val-5.selected {
+  background: #2563eb !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Compact Footer & Submit Button */
+.mobile-compact-footer {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mobile-footer-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 0 0.2rem;
+}
+
+.mobile-progress-text {
+  font-weight: 700;
+  color: #475569;
+}
+
+.mobile-progress-badge {
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.mobile-submit-btn {
+  width: 100% !important;
+  height: 46px !important;
+  font-size: 1.05rem !important;
+  font-weight: 850 !important;
+  border-radius: 10px !important;
+  border: none !important;
+  background: #1e40af !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.28) !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+}
+
+.mobile-submit-btn.disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+.mobile-submit-btn.pulse {
+  animation: submit-glow 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes submit-glow {
+  0% { transform: scale(1); box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3); }
+  100% { transform: scale(1.02); box-shadow: 0 6px 18px rgba(30, 64, 175, 0.55); }
+}
+
+

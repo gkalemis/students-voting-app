@@ -73,7 +73,7 @@ export function ResourceForm({
           title: name || null,
           criteria: sessionCriteria
         }));
-        location.href = `/session/${r.id}`;
+        saved();
         return;
       }
       saved();
