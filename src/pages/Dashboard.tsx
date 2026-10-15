@@ -1,9 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useT } from '../context/LocaleContext';
-import { api, json } from '../api';
-import { translateError } from '../i18n';
-import { FormKind, SessionItem } from '../types';
+import React from 'react';
+import { useDashboardState } from '../hooks/useDashboardState';
 import { Layout } from '../components/Layout';
 import { ResourceForm } from '../components/ResourceForm';
 import { StudentManager } from '../components/StudentManager';
@@ -16,93 +12,85 @@ import { WaitingSessionsSection } from '../components/dashboard/WaitingSessionsS
 import { ArchivedSessionsSection } from '../components/dashboard/ArchivedSessionsSection';
 import { DashboardDeleteModal } from '../components/dashboard/DashboardDeleteModal';
 import { ConcurrencyLockModal } from '../components/dashboard/ConcurrencyLockModal';
+import { CoursesListSection } from '../components/dashboard/CoursesListSection';
+import { PeriodsListSection } from '../components/dashboard/PeriodsListSection';
+import { GroupsListSection } from '../components/dashboard/GroupsListSection';
 
 export function Dashboard() {
-  const { t, language } = useT();
-  const navigate = useNavigate();
-  const [courses, setCourses] = useState<any[]>([]);
-  const [periods, setPeriods] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<SessionItem[]>([]);
-  const [form, setForm] = useState<FormKind>(null);
-  const [showImport, setShowImport] = useState(false);
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [studentVersion, setStudentVersion] = useState(0);
-  const [err, setErr] = useState('');
-  const [notice, setNotice] = useState('');
-  const [concurrencyLock, setConcurrencyLock] = useState<any>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ path: string; label: string; type: string } | null>(null);
-
-  const reload = () =>
-    Promise.all([api('/courses'), api('/periods'), api('/groups'), api('/sessions')])
-      .then(([a, b, c, d]) => {
-        setCourses(a);
-        setPeriods(b);
-        setGroups(c);
-        setSessions(d);
-      })
-      .catch(e => setErr(translateError(e, language)));
-
-  useEffect(() => {
-    reload();
-  }, [language]);
-
-  const open = (kind: FormKind) => {
-    setErr('');
-    setNotice('');
-    if (kind === 'group' && !courses.length) return setErr(t('courseFirst'));
-    if (kind === 'session' && !courses.length) return setErr(t('courseFirst'));
-    if (kind === 'session' && !groups.length) return setErr(t('groupFirst'));
-    setForm(kind);
-  };
-
-  const handleActivateSession = async (sessionId: number) => {
-    setErr('');
-    setNotice('');
-    try {
-      await api(`/sessions/${sessionId}/activate`, json('POST'));
-      setNotice(language === 'el' ? 'Η συνεδρία ενεργοποιήθηκε επιτυχώς!' : 'Session activated successfully!');
-      reload();
-      navigate(`/session/${sessionId}`);
-    } catch (e: any) {
-      if (e?.error === 'SESSION_CONCURRENCY_LOCK' || e?.status === 409) {
-        setConcurrencyLock(e);
-      } else {
-        setErr(translateError(e, language));
-      }
-    }
-  };
-
-  const handleExecuteDelete = async () => {
-    if (!deleteTarget) return;
-    setErr('');
-    try {
-      await api(deleteTarget.path, json('DELETE'));
-      setNotice(t('actionDone'));
-      setDeleteTarget(null);
-      reload();
-    } catch (e: any) {
-      setErr(translateError(e, language));
-      setDeleteTarget(null);
-    }
-  };
-
-  const activeOrUnarchived = sessions.find(s => s.status === 'ACTIVE' || s.status === 'COMPLETED');
-  const waitingSessions = sessions.filter(s => s.status === 'WAITING' || s.status === 'DRAFT');
-  const archivedSessions = sessions.filter(s => s.status === 'ARCHIVED');
+  const {
+    t,
+    language,
+    courses,
+    periods,
+    groups,
+    form,
+    setForm,
+    showImport,
+    setShowImport,
+    editingSessionId,
+    setEditingSessionId,
+    studentVersion,
+    setStudentVersion,
+    err,
+    setErr,
+    notice,
+    setNotice,
+    concurrencyLock,
+    setConcurrencyLock,
+    deleteTarget,
+    setDeleteTarget,
+    editingCourseId,
+    setEditingCourseId,
+    editCourseName,
+    setEditCourseName,
+    editCourseDesc,
+    setEditCourseDesc,
+    editCoursePeriodId,
+    setEditCoursePeriodId,
+    editingPeriodId,
+    setEditingPeriodId,
+    editPeriodName,
+    setEditPeriodName,
+    editingGroupId,
+    setEditingGroupId,
+    editGroupTitle,
+    setEditGroupTitle,
+    editGroupDate,
+    setEditGroupDate,
+    editGroupCourseId,
+    setEditGroupCourseId,
+    busySaving,
+    reload,
+    open,
+    handleActivateSession,
+    handleExecuteDelete,
+    handleSaveCourse,
+    handleSavePeriod,
+    handleSaveGroup,
+    handleLoadSampleFixture,
+    activeOrUnarchived,
+    waitingSessions,
+    archivedSessions,
+    enableSampleFixtureButton,
+    translateError
+  } = useDashboardState();
 
   return (
     <Layout>
-      <div className="dashboard-header-bar">
-        <div>
-          <h1>{t('lecturerDashboard')}</h1>
-          <p className="dashboard-subtitle">
-            {language === 'el'
-              ? 'Διαχείριση μαθημάτων, ομάδων και συνεδριών ψηφοφορίας'
-              : 'Management of courses, student groups, and voting sessions'}
-          </p>
-        </div>
-        <div className="dashboard-main-cta">
+      <div className="title-row">
+        <h1>{t('dashboard')}</h1>
+        <div className="actions">
+          {activeOrUnarchived && (
+            <button
+              type="button"
+              className="btn-student-phone-preview"
+              onClick={() => window.open(`/join/${activeOrUnarchived.public_id}`, '_blank', 'noopener,noreferrer')}
+              title={language === 'el' ? 'Προβολή της οθόνης φοιτητή στο κινητό σε νέα καρτέλα' : 'Open student phone view in new tab'}
+            >
+              <span>📱</span>
+              <span>{language === 'el' ? 'Προβολή Κινητού (Demo)' : 'Student Phone View (Demo)'}</span>
+            </button>
+          )}
           <button type="button" className="btn-create-session" onClick={() => open('session')}>
             <span>🚀</span>
             <span>+ {t('session')}</span>
@@ -115,89 +103,55 @@ export function Dashboard() {
 
       {activeOrUnarchived && <ActiveSessionBanner session={activeOrUnarchived} />}
 
-      <WorkflowBar onOpen={open} onOpenImport={() => setShowImport(true)} />
+      <WorkflowBar
+        onOpen={open}
+        onOpenImport={() => setShowImport(true)}
+        onLoadSampleFixture={handleLoadSampleFixture}
+        enableSampleFixtureButton={enableSampleFixtureButton}
+      />
 
-      {/* Academic Periods & Courses & Groups Resource Lists */}
-      <section style={{ margin: '1.5rem 0' }}>
-        <h2>{t('periods')}</h2>
-        {periods.length ? (
-          <div className="list">
-            {periods.map(p => (
-              <div className="card row" key={p.id}>
-                <div>
-                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{p.name}</b>
-                </div>
-                <button
-                  type="button"
-                  className="danger outline"
-                  style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
-                  onClick={() => setDeleteTarget({ path: `/periods/${p.id}`, label: p.name, type: t('period') })}
-                >
-                  🗑️ {t('delete')}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>{t('noItems')}</p>
-        )}
-      </section>
+      <CoursesListSection
+        courses={courses}
+        periods={periods}
+        editingCourseId={editingCourseId}
+        editCourseName={editCourseName}
+        editCourseDesc={editCourseDesc}
+        editCoursePeriodId={editCoursePeriodId}
+        busySaving={busySaving}
+        setEditingCourseId={setEditingCourseId}
+        setEditCourseName={setEditCourseName}
+        setEditCourseDesc={setEditCourseDesc}
+        setEditCoursePeriodId={setEditCoursePeriodId}
+        onSaveCourse={handleSaveCourse}
+        onDeleteTarget={setDeleteTarget}
+      />
 
-      <section style={{ margin: '1.5rem 0' }}>
-        <h2>{t('courses')}</h2>
-        {courses.length ? (
-          <div className="list">
-            {courses.map(c => (
-              <div className="card row" key={c.id}>
-                <div>
-                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{c.name}</b>
-                  {c.description && <span style={{ color: '#64748b', fontSize: '.88rem', marginLeft: '.6rem' }}>({c.description})</span>}
-                </div>
-                <button
-                  type="button"
-                  className="danger outline"
-                  style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
-                  onClick={() => setDeleteTarget({ path: `/courses/${c.id}`, label: c.name, type: t('course') })}
-                >
-                  🗑️ {t('delete')}
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>{t('noItems')}</p>
-        )}
-      </section>
+      <PeriodsListSection
+        periods={periods}
+        editingPeriodId={editingPeriodId}
+        editPeriodName={editPeriodName}
+        busySaving={busySaving}
+        setEditingPeriodId={setEditingPeriodId}
+        setEditPeriodName={setEditPeriodName}
+        onSavePeriod={handleSavePeriod}
+        onDeleteTarget={setDeleteTarget}
+      />
 
-      <section style={{ margin: '1.5rem 0' }}>
-        <h2>{t('groups')}</h2>
-        {groups.length ? (
-          <div className="list">
-            {groups.map(g => {
-              const crs = courses.find(c => c.id === g.course_id);
-              return (
-                <div className="card row" key={g.id}>
-                  <div>
-                    <b style={{ fontSize: '1rem', color: '#0f172a' }}>{g.title}</b>
-                    {crs && <span style={{ color: '#475569', fontSize: '.88rem', marginLeft: '.6rem' }}>[{crs.name}]</span>}
-                    {g.presentation_date && <span style={{ color: '#64748b', fontSize: '.85rem', marginLeft: '.5rem' }}>· {g.presentation_date}</span>}
-                  </div>
-                  <button
-                    type="button"
-                    className="danger outline"
-                    style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
-                    onClick={() => setDeleteTarget({ path: `/groups/${g.id}`, label: g.title, type: t('group') })}
-                  >
-                    🗑️ {t('delete')}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p>{t('noItems')}</p>
-        )}
-      </section>
+      <GroupsListSection
+        groups={groups}
+        courses={courses}
+        editingGroupId={editingGroupId}
+        editGroupTitle={editGroupTitle}
+        editGroupDate={editGroupDate}
+        editGroupCourseId={editGroupCourseId}
+        busySaving={busySaving}
+        setEditingGroupId={setEditingGroupId}
+        setEditGroupTitle={setEditGroupTitle}
+        setEditGroupDate={setEditGroupDate}
+        setEditGroupCourseId={setEditGroupCourseId}
+        onSaveGroup={handleSaveGroup}
+        onDeleteTarget={setDeleteTarget}
+      />
 
       <StudentManager groups={groups} onOpenImport={() => setShowImport(true)} onStudentsChanged={() => setStudentVersion(v => v + 1)} />
       <HierarchyView periods={periods} courses={courses} groups={groups} refreshKey={studentVersion} />
@@ -234,7 +188,7 @@ export function Dashboard() {
         <CsvImportModal
           groups={groups}
           close={() => setShowImport(false)}
-          onSuccess={() => { setShowImport(false); setNotice(t('actionDone')); setStudentVersion(v => v + 1); reload(); }}
+          onSuccess={() => { setShowImport(false); setNotice(t('csvSuccessSummary')); setStudentVersion(v => v + 1); reload(); }}
         />
       )}
 

@@ -8,17 +8,24 @@ import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
 import { PresentationHeaderCard } from '../components/PresentationHeaderCard';
 import { ResultsPodium } from '../components/ResultsPodium';
+import { applyThemeColor } from '../theme';
 
 export function Projector() {
   const { publicId = '' } = useParams();
   const { t } = useT();
   const [s, load] = usePublic(publicId);
 
+  React.useEffect(() => {
+    if (s?.theme_color) {
+      applyThemeColor(s.theme_color);
+    }
+  }, [s?.theme_color]);
+
   if (!s) return <>{t('loading')}</>;
 
   const fullJoinUrl = `${window.location.origin}/join/${s.public_id}`;
   const allClosed = Boolean(s.presentations && s.presentations.length > 0 && s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES'));
-  const showResults = Boolean(s.results && s.results.length > 0 && !s.active_presentation && (s.results_revealed || s.status === 'COMPLETED' || allClosed));
+  const showResults = Boolean(s.results && s.results.length > 0 && !s.active_presentation && (s.results_revealed || s.status === 'COMPLETED'));
 
   return (
     <BrandedLayout state={s}>
@@ -60,7 +67,7 @@ export function Projector() {
                 </div>
                 <div className="projector-idle-content">
                   <h1 className="projector-status-heading">
-                    {s.status === 'COMPLETED' ? t('sessionCompleted') : t('waitingPresentation')}
+                    {s.status === 'COMPLETED' ? t('sessionCompleted') : allClosed ? t('waitingLecturerToEndSession') : t('waitingPresentation')}
                   </h1>
                   <p className="projector-sub-instruction">
                     {t('autoUpdate')}

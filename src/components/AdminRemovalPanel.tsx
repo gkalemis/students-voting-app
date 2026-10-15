@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useT } from '../context/LocaleContext';
-import { api, json } from '../api';
-import { translateError, translateStatus } from '../i18n';
-import { toGreekUppercase } from '../utils/greek';
+import React from 'react';
+import { useAdminRemovalState } from '../hooks/useAdminRemovalState';
+import { AdminRemovalConfirmModal } from './admin/removal/AdminRemovalConfirmModal';
+import { AdminRemovalCoursesSection } from './admin/removal/AdminRemovalCoursesSection';
+import { AdminRemovalPeriodsSection } from './admin/removal/AdminRemovalPeriodsSection';
+import { AdminRemovalGroupsSection } from './admin/removal/AdminRemovalGroupsSection';
+import { AdminRemovalStudentsAccordion } from './admin/removal/AdminRemovalStudentsAccordion';
+import { AdminRemovalSessionsSection } from './admin/removal/AdminRemovalSessionsSection';
 
 export function AdminRemovalPanel({
   users: _users, reloadUsers: _reloadUsers
@@ -10,134 +13,153 @@ export function AdminRemovalPanel({
   users?: any[];
   reloadUsers?: () => void;
 }) {
-  const { t, language } = useT();
-  const [courses, setCourses] = useState<any[]>([]);
-  const [periods, setPeriods] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [confirmModal, setConfirmModal] = useState<{ path: string; label: string; verb: 'delete' | 'archive' } | null>(null);
-  const [busyAction, setBusyAction] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-
-  const load = () =>
-    Promise.all([api('/courses'), api('/periods'), api('/groups'), api('/groups/students'), api('/sessions')])
-      .then(([a, b, c, s, d]) => { setCourses(a); setPeriods(b); setGroups(c); setStudents(s); setSessions(d); })
-      .catch(e => setError(translateError(e, language)));
-
-  useEffect(() => { load(); }, [language]);
-
-  async function executeRemove() {
-    if (!confirmModal) return;
-    setBusyAction(true);
-    setError('');
-    try {
-      await api(confirmModal.path, json(confirmModal.verb === 'archive' ? 'POST' : 'DELETE'));
-      setMessage(t('actionDone'));
-      setConfirmModal(null);
-      load();
-    } catch (e) {
-      setError(translateError(e, language));
-    } finally {
-      setBusyAction(false);
-    }
-  }
-
-  const list = (title: string, items: any[], name: (x: any) => string, path: (x: any) => string) => (
-    <section>
-      <h3>{title}</h3>
-      <div className="list">
-        {items.length ? (
-          items.map(x => (
-            <div className="card row" key={x.id}>
-              <span>{name(x)}</span>
-              <button
-                type="button"
-                className="danger"
-                onClick={() => setConfirmModal({ path: path(x), label: name(x), verb: 'delete' })}
-              >
-                {t('delete')}
-              </button>
-            </div>
-          ))
-        ) : (
-          <p>{t('noItems')}</p>
-        )}
-      </div>
-    </section>
-  );
+  const {
+    t,
+    language,
+    courses,
+    periods,
+    groups,
+    students,
+    sessions,
+    confirmModal,
+    setConfirmModal,
+    busyAction,
+    message,
+    error,
+    editingCourseId,
+    setEditingCourseId,
+    editCourseName,
+    setEditCourseName,
+    editCourseDesc,
+    setEditCourseDesc,
+    editCoursePeriodId,
+    setEditCoursePeriodId,
+    editingPeriodId,
+    setEditingPeriodId,
+    editPeriodName,
+    setEditPeriodName,
+    editingGroupId,
+    setEditingGroupId,
+    editGroupTitle,
+    setEditGroupTitle,
+    editGroupDate,
+    setEditGroupDate,
+    editGroupCourseId,
+    setEditGroupCourseId,
+    editingStudentId,
+    setEditingStudentId,
+    editStudentName,
+    setEditStudentName,
+    editStudentTitle,
+    setEditStudentTitle,
+    busySaving,
+    expandedCourses,
+    expandedGroups,
+    toggleCourse,
+    toggleGroup,
+    handleSaveCourse,
+    handleSavePeriod,
+    handleSaveGroup,
+    handleSaveStudent,
+    executeRemove,
+    renderLecturerBadge
+  } = useAdminRemovalState();
 
   return (
     <section style={{ margin: '2rem 0' }}>
       <h2>{t('removeManagement')}</h2>
+      <p style={{ color: '#64748b', fontSize: '.9rem', margin: '0 0 1rem 0' }}>
+        {language === 'el'
+          ? 'Πλήρης διαχείριση, απευθείας επεξεργασία (inline) και διαγραφή μαθημάτων, περιόδων, ομάδων και φοιτητών με επισήμανση διδάσκοντα.'
+          : 'Full management, inline editing, and deletion of courses, periods, groups, and students with lecturer attribution.'}
+      </p>
+
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p className="notice" role="status">{message}</p>}
 
-      {list(t('courses'), courses, x => x.name, x => `/courses/${x.id}`)}
-      {list(t('periods'), periods, x => x.name, x => `/periods/${x.id}`)}
-      {list(t('groups'), groups, x => x.title, x => `/groups/${x.id}`)}
-      {list(t('students'), students, x => `${x.full_name}${x.presentation_title ? ` — «${x.presentation_title}»` : ''}`, x => `/students/${x.id}`)}
+      <AdminRemovalCoursesSection
+        courses={courses}
+        periods={periods}
+        editingCourseId={editingCourseId}
+        editCourseName={editCourseName}
+        editCourseDesc={editCourseDesc}
+        editCoursePeriodId={editCoursePeriodId}
+        busySaving={busySaving}
+        setEditingCourseId={setEditingCourseId}
+        setEditCourseName={setEditCourseName}
+        setEditCourseDesc={setEditCourseDesc}
+        setEditCoursePeriodId={setEditCoursePeriodId}
+        onSaveCourse={handleSaveCourse}
+        onSetConfirmModal={setConfirmModal}
+        renderLecturerBadge={renderLecturerBadge}
+      />
 
-      <section>
-        <h3>{t('sessions')}</h3>
-        <div className="list">
-          {sessions.length ? (
-            sessions.map(x => (
-              <div className="card row" key={x.id}>
-                <span>{x.title || `${t('session')} ${x.session_date}`} · <span className={`pill ${x.status.toLowerCase()}`} lang="el" style={{ marginLeft: '.5rem', fontSize: '.72rem' }}>{toGreekUppercase(translateStatus(x.status, t))}</span></span>
-                <div className="actions">
-                  {x.status === 'COMPLETED' && (
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => setConfirmModal({ path: `/sessions/${x.id}/archive`, label: x.title || x.session_date, verb: 'archive' })}
-                    >
-                      {t('archiveAction')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => setConfirmModal({ path: `/sessions/${x.id}`, label: x.title || x.session_date, verb: 'delete' })}
-                  >
-                    {t('delete')}
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p>{t('noItems')}</p>
-          )}
-        </div>
-      </section>
+      <AdminRemovalPeriodsSection
+        periods={periods}
+        editingPeriodId={editingPeriodId}
+        editPeriodName={editPeriodName}
+        busySaving={busySaving}
+        setEditingPeriodId={setEditingPeriodId}
+        setEditPeriodName={setEditPeriodName}
+        onSavePeriod={handleSavePeriod}
+        onSetConfirmModal={setConfirmModal}
+        renderLecturerBadge={renderLecturerBadge}
+      />
+
+      <AdminRemovalGroupsSection
+        groups={groups}
+        courses={courses}
+        editingGroupId={editingGroupId}
+        editGroupTitle={editGroupTitle}
+        editGroupDate={editGroupDate}
+        editGroupCourseId={editGroupCourseId}
+        busySaving={busySaving}
+        setEditingGroupId={setEditingGroupId}
+        setEditGroupTitle={setEditGroupTitle}
+        setEditGroupDate={setEditGroupDate}
+        setEditGroupCourseId={setEditGroupCourseId}
+        onSaveGroup={handleSaveGroup}
+        onSetConfirmModal={setConfirmModal}
+        renderLecturerBadge={renderLecturerBadge}
+      />
+
+      <AdminRemovalStudentsAccordion
+        courses={courses}
+        groups={groups}
+        students={students}
+        expandedCourses={expandedCourses}
+        expandedGroups={expandedGroups}
+        toggleCourse={toggleCourse}
+        toggleGroup={toggleGroup}
+        setEditingGroupId={setEditingGroupId}
+        setEditGroupTitle={setEditGroupTitle}
+        setEditGroupDate={setEditGroupDate}
+        setEditGroupCourseId={setEditGroupCourseId}
+        editingStudentId={editingStudentId}
+        setEditingStudentId={setEditingStudentId}
+        editStudentName={editStudentName}
+        setEditStudentName={setEditStudentName}
+        editStudentTitle={editStudentTitle}
+        setEditStudentTitle={setEditStudentTitle}
+        onSaveStudent={handleSaveStudent}
+        busySaving={busySaving}
+        onSetConfirmModal={setConfirmModal}
+        renderLecturerBadge={renderLecturerBadge}
+      />
+
+      <AdminRemovalSessionsSection
+        sessions={sessions}
+        onSetConfirmModal={setConfirmModal}
+        renderLecturerBadge={renderLecturerBadge}
+      />
 
       {confirmModal && (
-        <div className="modal" role="dialog" aria-modal="true">
-          <div className="card" style={{ maxWidth: 440 }}>
-            <h2>{confirmModal.verb === 'archive' ? t('confirmArchive') : t('confirmDelete')}</h2>
-            <p style={{ margin: '.8rem 0', fontSize: '.95rem' }}>
-              <b>{confirmModal.label}</b>
-            </p>
-            <div className="actions" style={{ marginTop: '1.2rem' }}>
-              <button
-                className={confirmModal.verb === 'archive' ? 'secondary' : 'danger'}
-                disabled={busyAction}
-                onClick={executeRemove}
-              >
-                {confirmModal.verb === 'archive' ? t('archiveAction') : t('delete')}
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={busyAction}
-                onClick={() => setConfirmModal(null)}
-              >
-                {t('cancel')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AdminRemovalConfirmModal
+          confirmModal={confirmModal}
+          busyAction={busyAction}
+          onConfirm={executeRemove}
+          onClose={() => setConfirmModal(null)}
+        />
       )}
     </section>
   );

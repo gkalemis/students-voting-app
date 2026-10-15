@@ -10,6 +10,13 @@ finished=false
 previous_image=""
 image_name=""
 backup_dir=""
+check_only=false
+case "${1:-}" in
+  --check) check_only=true ;;
+  '') ;;
+  *) printf 'Usage: %s [--check]\n' "$0" >&2; exit 2 ;;
+esac
+[ "$#" -le 1 ] || { printf 'Too many arguments\n' >&2; exit 2; }
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -36,6 +43,7 @@ env_value() {
 
 recover() {
   local code=$?
+  trap - EXIT INT TERM
   if [ "$finished" = false ] && [ "$stopped" = true ] && [ -n "$previous_image" ] && [ -n "$image_name" ]; then
     printf '\nDeployment failed; restoring the previous image...\n' >&2
     docker tag "$previous_image" "$image_name" || true
@@ -44,7 +52,9 @@ recover() {
   [ -z "$backup_dir" ] || printf 'Backup directory: %s\n' "$backup_dir" >&2
   exit "$code"
 }
-trap recover ERR INT TERM
+trap recover EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 require docker
 require curl
@@ -53,7 +63,7 @@ require tar
 [ -f .env ] || fail '.env is missing'
 
 if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
-  fail 'Working tree is not clean; commit or intentionally remove local source changes first'
+  fail 'Working tree is not clean; review and commit local changes before pulling or deploying. Nothing was discarded.'
 fi
 
 branch="$(git symbolic-ref --quiet --short HEAD)" || fail 'Deployments require a named Git branch'
@@ -72,11 +82,26 @@ printf 'Upstream: %s %s\n' "$upstream" "${upstream_commit:0:12}"
 
 if [ "$local_commit" != "$upstream_commit" ]; then
   if [ "$local_commit" = "$merge_base" ]; then
-    printf '\nDeployment stopped: local source is behind %s.\n' "$upstream" >&2
+    printf '\nIncoming changes from %s:\n' "$upstream"
     git log --oneline "HEAD..@{upstream}" >&2
     git diff --stat "HEAD..@{upstream}" >&2
     git diff --name-status "HEAD..@{upstream}" >&2
-    printf '\nReview the changes, then run: git pull --ff-only\n' >&2
+    if [ "$check_only" = true ]; then
+      printf '\nFast-forward is possible. Review with: git diff HEAD..%s\nRun ./deploy.sh to confirm the pull and deploy.\n' "$upstream"
+      exit 0
+    fi
+    [ -t 0 ] || fail 'Pull requires interactive confirmation; run ./deploy.sh from a terminal'
+    read -r -p 'Pull these reviewed changes and deploy? Type yes: ' answer
+    [ "$answer" = yes ] || fail 'Cancelled before pull or deployment'
+    source_backup="backups/pre-pull-$(date +%Y%m%d-%H%M%S)-${local_commit:0:12}"
+    mkdir -p "$source_backup"
+    git archive --format=tar.gz HEAD > "$source_backup/source.tar.gz"
+    tar -tzf "$source_backup/source.tar.gz" > /dev/null
+    printf 'Source backup: %s/source.tar.gz\n' "$source_backup"
+    # Merge the exact commit just reviewed; do not fetch a different commit during pull.
+    git merge --ff-only "$upstream_commit"
+    printf '%s\n' 'Updated source. Restarting the updated deployment script...'
+    exec bash ./deploy.sh
   elif [ "$upstream_commit" = "$merge_base" ]; then
     printf '\nDeployment stopped: local source contains commits not pushed to %s.\n' "$upstream" >&2
     git log --oneline "@{upstream}..HEAD" >&2
@@ -88,6 +113,10 @@ if [ "$local_commit" != "$upstream_commit" ]; then
   exit 1
 fi
 printf '%s\n' 'Git synchronization verified.'
+if [ "$check_only" = true ]; then
+  printf '%s\n' 'No incoming changes. No pull, build or deployment performed.'
+  exit 0
+fi
 
 docker compose config --quiet
 public_base_url="$(env_value PUBLIC_BASE_URL)"
@@ -117,8 +146,8 @@ stopped=true
 
 docker compose run --rm --no-deps -T data-init \
   sh -c 'tar -C /app/data -czf - .' > "$archive_tmp"
-tar -tzf "$archive_tmp" >/dev/null
-tar -tzf "$archive_tmp" | grep -qx './db.json' || fail 'Backup does not contain db.json'
+tar -tzf "$archive_tmp" > "${backup_dir}/contents.txt"
+grep -qx './db.json' "${backup_dir}/contents.txt" || fail 'Backup does not contain db.json'
 mv "$archive_tmp" "$archive"
 printf 'Verified backup: %s\n' "$archive"
 
@@ -136,7 +165,7 @@ for _ in $(seq 1 45); do
 done
 [ "$health" = healthy ] || { docker compose logs --no-color --tail=100 "$service"; fail "Container health is $health"; }
 
-health_body="$(curl -fsS --max-time 20 "${public_base_url}/api/health")"
+health_body="$(curl -fsS --retry 5 --retry-all-errors --retry-delay 2 --max-time 20 "${public_base_url}/api/health")"
 printf '%s' "$health_body" | grep -q '"status":"ok"' || fail 'Public health response is invalid'
 
 headers_file="$(mktemp)"
@@ -150,7 +179,7 @@ ports="$(docker inspect "$container_id" --format '{{json .NetworkSettings.Ports}
 printf '%s' "$ports" | grep -q '"3000/tcp":null' || fail 'Application port is unexpectedly published on the host'
 
 finished=true
-trap - ERR INT TERM
+trap - EXIT INT TERM
 printf '\nDeployment successful.\n'
 printf 'Health: %s\n' "$health"
 printf 'Backup: %s\n' "$archive"

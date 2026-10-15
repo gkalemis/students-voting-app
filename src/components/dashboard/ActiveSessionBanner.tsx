@@ -49,7 +49,18 @@ export function ActiveSessionBanner({ session }: Props) {
         </p>
       </div>
 
-      <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {session.public_id && (
+          <button
+            type="button"
+            className="btn-student-phone-preview"
+            onClick={() => window.open(`/join/${session.public_id}`, '_blank', 'noopener,noreferrer')}
+            title={language === 'el' ? 'Προβολή της οθόνης φοιτητή στο κινητό σε νέα καρτέλα' : 'Open new tab with student phone view'}
+          >
+            <span>📱</span>
+            <span>{language === 'el' ? 'Προβολή Κινητού (Demo)' : 'Student Phone View (Demo)'}</span>
+          </button>
+        )}
         <Link to={`/session/${session.id}`} className="button primary" style={{ fontWeight: 600 }}>
           🚀 {t('goToOpenSession')}
         </Link>

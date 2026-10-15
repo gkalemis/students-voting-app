@@ -1,0 +1,90 @@
+/* Inline Edit Controls */
+.inline-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.inline-edit-input {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.88rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  min-width: 130px;
+  flex: 1 1 auto;
+}
+.btn-inline-save {
+  padding: 0.3rem 0.65rem !important;
+  font-size: 0.8rem !important;
+  min-height: 30px !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+.btn-inline-cancel {
+  padding: 0.3rem 0.65rem !important;
+  font-size: 0.8rem !important;
+  min-height: 30px !important;
+}
+.btn-inline-edit {
+  padding: 0.25rem 0.55rem !important;
+  font-size: 0.82rem !important;
+  min-height: 30px !important;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.btn-inline-edit:hover {
+  background: #e2e8f0 !important;
+}
+
+/* Admin Hierarchical Accordion for Students (Course -> Group -> Students) */
+.admin-accordion-course {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  margin-bottom: 0.85rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.admin-accordion-course-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  background: #f8fafc;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  user-select: none;
+}
+.admin-accordion-course.open .admin-accordion-course-header {
+  border-bottom-color: #e2e8f0;
+}
+.admin-accordion-group {
+  margin: 0.6rem 0.75rem 0.75rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafafa;
+  overflow: hidden;
+}
+.admin-accordion-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  background: #f1f5f9;
+  cursor: pointer;
+  user-select: none;
+}
+.admin-accordion-group.open .admin-accordion-group-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+.admin-accordion-students-list {
+  padding: 0.55rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: #ffffff;
+}

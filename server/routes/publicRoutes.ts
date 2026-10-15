@@ -3,7 +3,7 @@ import { config } from '../config';
 import crypto from 'crypto';
 import { db, effectiveBranding, getVoteCount, calculateResults, hashToken } from '../db';
 import { broadcastSession } from '../ws';
-import { ParticipationToken, Vote } from '../types';
+import { ParticipationToken } from '../types';
 
 import { cleanupGhostPresentations } from './sessionRoutes';
 
@@ -56,13 +56,13 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
     } : null,
     criteria: criteria.map(c => ({ id: c.id, name: c.name, weight: c.weight })),
     vote_count: currentActiveP ? getVoteCount(currentActiveP.id) : 0,
+    total_session_votes: db.votes.filter(v => presentations.some(p => p.id === v.presentation_id)).length,
     participation_url: `${config.publicBaseUrl.replace(/\/$/, '')}/join/${s.public_id}`,
     branding: effectiveBranding(course),
+    theme_color: (db.users.find(u => u.id === s.owner_id) || (course ? db.users.find(u => u.id === course.owner_id) : null))?.theme_color || '#0d9488',
     presentations,
     server_time: new Date().toISOString(),
-    results: (s.results_revealed || s.status === 'COMPLETED' || s.status === 'ARCHIVED' || (!currentActiveP && presentations.length > 0 && presentations.every(p => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')))
-      ? (calculateResults(s.id) || s.archive_snapshot?.results)
-      : null
+    results: (s.results_revealed || s.status === 'COMPLETED' || s.status === 'ARCHIVED') ? (calculateResults(s.id) || s.archive_snapshot?.results) : null
   });
 });
 

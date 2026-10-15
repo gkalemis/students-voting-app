@@ -6,11 +6,13 @@ import { broadcastSession } from '../ws';
 import { User, PresentationSession } from '../types';
 import { deleteSessionEverywhere, sessionLifecycleRouter } from './sessionLifecycleRoutes';
 import { config } from '../config';
+import { demoSessionRouter } from './demoSessionRoutes';
 
 export function cleanupGhostPresentations(_sessionId: number) {}
 export { deleteSessionEverywhere };
 export const sessionRouter = Router();
 sessionRouter.use(sessionLifecycleRouter);
+sessionRouter.use(demoSessionRouter);
 
 sessionRouter.get('/sessions', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
@@ -21,7 +23,6 @@ sessionRouter.get('/sessions', authMiddleware, (req, res) => {
   res.json(list.map(s => {
     const course = db.courses.find(c => c.id === s.course_id);
     const group = db.groups.find(g => g.id === s.group_id);
-    const groupTitle = s.group_title || group?.title || s.archive_snapshot?.group_title || '';
     return {
       id: s.id,
       public_id: s.public_id,
@@ -32,7 +33,7 @@ sessionRouter.get('/sessions', authMiddleware, (req, res) => {
       course_id: s.course_id,
       course_name: course?.name || s.archive_snapshot?.course_name || '',
       group_id: s.group_id,
-      group_title: groupTitle,
+      group_title: s.group_title || group?.title || s.archive_snapshot?.group_title || '',
       owner_id: s.owner_id,
       archive_snapshot: s.archive_snapshot
     };
@@ -222,17 +223,10 @@ sessionRouter.get('/sessions/:sid', authMiddleware, (req, res) => {
   const course = db.courses.find(c => c.id === s.course_id);
   const period = db.periods.find(p => p.id === s.period_id);
   const group = db.groups.find(g => g.id === s.group_id);
-
-  const calculated = (s.status === 'COMPLETED' || s.status === 'ARCHIVED' || s.results_revealed)
-    ? calculateResults(sid)
-    : null;
+  const calculated = (s.status === 'COMPLETED' || s.status === 'ARCHIVED' || s.results_revealed) ? calculateResults(sid) : null;
 
   res.json({
-    id: s.id,
-    public_id: s.public_id,
-    title: s.title,
-    status: s.status,
-    session_date: s.session_date,
+    id: s.id, public_id: s.public_id, title: s.title, status: s.status, session_date: s.session_date,
     course_name: course?.name || s.archive_snapshot?.course_name || '',
     period_name: period?.name || s.archive_snapshot?.period_name || '',
     group_title: s.group_title || group?.title || s.archive_snapshot?.group_title || '',

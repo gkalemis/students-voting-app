@@ -1,11 +1,13 @@
 @import './styles/nav.css';
 @import './styles/common.css';
 @import './styles/badges.css';
+@import './styles/admin-accordion.css';
 @import './styles/dashboard.css';
 @import './styles/csv-modal.css';
 @import './styles/csv-preview.css';
 @import './styles/students.css';
 @import './styles/mobile-voting.css';
+@import './styles/mobile-voting-cards.css';
 @import './styles/mobile-rating.css';
 @import './styles/podium.css';
 @import './styles/podium-cards.css';

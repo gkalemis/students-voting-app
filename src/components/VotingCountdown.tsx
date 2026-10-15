@@ -1,7 +1,19 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useT } from '../context/LocaleContext';
 
-export function VotingCountdown({ closesAt, totalDuration = 60, onExpire, isCompact = false }: { closesAt?: string; totalDuration?: number; onExpire?: () => void; isCompact?: boolean }) {
+export function VotingCountdown({
+  closesAt,
+  totalDuration = 60,
+  onExpire,
+  isCompact = false,
+  lineOnly = false
+}: {
+  closesAt?: string;
+  totalDuration?: number;
+  onExpire?: () => void;
+  isCompact?: boolean;
+  lineOnly?: boolean;
+}) {
   const { t } = useT();
   const [seconds, setSeconds] = useState(0);
   const [initialDiff, setInitialDiff] = useState(totalDuration);
@@ -39,6 +51,39 @@ export function VotingCountdown({ closesAt, totalDuration = 60, onExpire, isComp
   const isUrgent = seconds <= 15 && seconds > 0;
   const isExpired = seconds === 0;
 
+  const percent = initialDiff > 0 ? Math.min(100, Math.max(0, (seconds / initialDiff) * 100)) : 0;
+
+  if (lineOnly) {
+    const formattedTime = isExpired
+      ? t('timeUp')
+      : `${mins > 0 ? `${mins}:` : ''}${secs < 10 && mins > 0 ? `0${secs}` : secs}s`;
+
+    return (
+      <div className="mobile-timer-line-container">
+        <div
+          className="mobile-timer-line-wrapper"
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={t('timeRemainingFull')}
+          title={formattedTime}
+        >
+          <div className="mobile-timer-track">
+            <div
+              className={`mobile-timer-fill ${isUrgent ? 'urgent' : ''}`}
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </div>
+        <div className={`mobile-timer-pill ${isUrgent ? 'urgent' : ''}`} aria-hidden="true">
+          <span className="mobile-timer-icon">⏱️</span>
+          <span className="mobile-timer-digits font-mono">{formattedTime}</span>
+        </div>
+      </div>
+    );
+  }
+
   if (isCompact) {
     return (
       <div className={`timer-compact-pill ${isUrgent ? 'timer-urgent' : ''}`} role="timer" aria-live="polite">
@@ -51,7 +96,6 @@ export function VotingCountdown({ closesAt, totalDuration = 60, onExpire, isComp
   }
 
   const timeFormatted = `${mins > 0 ? `${mins}:` : ''}${secs < 10 && mins > 0 ? `0${secs}` : secs} ${t('seconds')}`;
-  const percent = initialDiff > 0 ? Math.min(100, Math.max(0, (seconds / initialDiff) * 100)) : 0;
 
   return (
     <div className="timer-banner" role="timer" aria-live="polite">

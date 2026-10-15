@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { api, json } from '../api';
 import { translateError, Language } from '../i18n';
 
@@ -21,7 +21,25 @@ export function useSessionActions({
   load,
   navigate
 }: UseSessionActionsProps) {
-  const [toastMsg, setToastMsg] = useState('');
+  const [toastMsg, setToastMsgState] = useState('');
+  const toastTimerRef = useRef<any>(null);
+
+  const setToastMsg = (msg: string) => {
+    setToastMsgState(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (msg) {
+      toastTimerRef.current = setTimeout(() => {
+        setToastMsgState('');
+      }, 3000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   const [err, setErr] = useState('');
   const [concurrencyLock, setConcurrencyLock] = useState<any>(null);
   const [archiving, setArchiving] = useState(false);

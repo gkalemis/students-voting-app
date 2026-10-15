@@ -1,0 +1,109 @@
+import React from 'react';
+import { useT } from '../../../context/LocaleContext';
+
+interface AdminRemovalPeriodsSectionProps {
+  periods: any[];
+  editingPeriodId: number | null;
+  editPeriodName: string;
+  busySaving: boolean;
+  setEditingPeriodId: (id: number | null) => void;
+  setEditPeriodName: (val: string) => void;
+  onSavePeriod: (id: number) => void;
+  onSetConfirmModal: (modal: any) => void;
+  renderLecturerBadge: (item: any) => React.ReactNode;
+}
+
+export function AdminRemovalPeriodsSection({
+  periods,
+  editingPeriodId,
+  editPeriodName,
+  busySaving,
+  setEditingPeriodId,
+  setEditPeriodName,
+  onSavePeriod,
+  onSetConfirmModal,
+  renderLecturerBadge
+}: AdminRemovalPeriodsSectionProps) {
+  const { t } = useT();
+
+  return (
+    <section style={{ margin: '1.5rem 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3>{t('periods')} ({periods.length})</h3>
+      </div>
+      <div className="list">
+        {periods.length ? (
+          periods.map(p => {
+            const isEditing = editingPeriodId === p.id;
+            if (isEditing) {
+              return (
+                <div className="card" key={p.id} style={{ background: '#f0fdfa', borderColor: '#99f6e4' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="inline-edit-input"
+                      value={editPeriodName}
+                      onChange={e => setEditPeriodName(e.target.value)}
+                      placeholder={t('periodName')}
+                      disabled={busySaving}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn-inline-save"
+                      onClick={() => onSavePeriod(p.id)}
+                      disabled={busySaving}
+                      title={t('save')}
+                    >
+                      💾 {busySaving ? '…' : t('save')}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary btn-inline-cancel"
+                      onClick={() => setEditingPeriodId(null)}
+                      disabled={busySaving}
+                      title={t('cancel')}
+                    >
+                      ✕ {t('cancel')}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="card row" key={p.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{p.name}</b>
+                  {renderLecturerBadge(p)}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                  <button
+                    type="button"
+                    className="btn-inline-edit"
+                    onClick={() => {
+                      setEditingPeriodId(p.id);
+                      setEditPeriodName(p.name || '');
+                    }}
+                    title={t('edit')}
+                  >
+                    ✏️ {t('edit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => onSetConfirmModal({ path: `/periods/${p.id}`, label: p.name, verb: 'delete' })}
+                  >
+                    {t('delete')}
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p>{t('noItems')}</p>
+        )}
+      </div>
+    </section>
+  );
+}

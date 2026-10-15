@@ -77,7 +77,60 @@ nav{background:var(--accent) !important;box-shadow:0 3px 12px rgba(15,23,42,0.18
 .category-select{width:100%;margin-top:.4rem;padding:.7rem;border:1.5px solid #93c5fd;border-radius:8px;font-size:1rem;background:#f8fafc;font-weight:600}
 .progress-summary{display:flex;justify-content:space-between;align-items:center;font-size:.92rem;font-weight:800;color:#1e3a8a;margin:.9rem 0}
 .progress-complete-badge{color:#047857;background:#ecfdf5;padding:.2rem .5rem;border-radius:6px;border:1px solid #a7f3d0}
-.submit-btn-large{width:100%;min-height:52px;font-size:1.15rem;font-weight:850;margin-top:.6rem}
+.submit-btn-large {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.15rem;
+  font-weight: 850;
+  margin-top: 0.6rem;
+  border-radius: 12px;
+  background: #d97706;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.submit-btn-large:hover:not(:disabled) {
+  background: #b45309;
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 22px rgba(217, 119, 6, 0.45);
+}
+
+.submit-btn-large:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* When score is changed: pulses and changes to energetic emerald gradient */
+.submit-btn-large.modified {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #047857 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid #6ee7b7 !important;
+  animation: submit-vibrant-pulse 1.15s infinite cubic-bezier(0.4, 0, 0.6, 1) !important;
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5) !important;
+}
+
+/* When submitted and calm */
+.submit-btn-large.submitted:not(.modified) {
+  background: #059669 !important;
+  border: 1.5px solid #6ee7b7 !important;
+  box-shadow: 0 3px 12px rgba(5, 150, 105, 0.3) !important;
+  animation: none !important;
+}
+
+.submit-btn-large.disabled, .submit-btn-large:disabled {
+  background: #94a3b8 !important;
+  color: #ffffff !important;
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none !important;
+  transform: none !important;
+}
 
 /* BrandHeader Enhanced */
 .brand-header-enhanced{display:flex;align-items:center;gap:1rem;padding:.6rem 0}

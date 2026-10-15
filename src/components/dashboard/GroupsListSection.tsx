@@ -1,0 +1,141 @@
+import React from 'react';
+import { useT } from '../../context/LocaleContext';
+
+interface GroupsListSectionProps {
+  groups: any[];
+  courses: any[];
+  editingGroupId: number | null;
+  editGroupTitle: string;
+  editGroupDate: string;
+  editGroupCourseId: string;
+  busySaving: boolean;
+  setEditingGroupId: (id: number | null) => void;
+  setEditGroupTitle: (val: string) => void;
+  setEditGroupDate: (val: string) => void;
+  setEditGroupCourseId: (val: string) => void;
+  onSaveGroup: (id: number) => void;
+  onDeleteTarget: (target: { path: string; label: string; type: string }) => void;
+}
+
+export function GroupsListSection({
+  groups,
+  courses,
+  editingGroupId,
+  editGroupTitle,
+  editGroupDate,
+  editGroupCourseId,
+  busySaving,
+  setEditingGroupId,
+  setEditGroupTitle,
+  setEditGroupDate,
+  setEditGroupCourseId,
+  onSaveGroup,
+  onDeleteTarget
+}: GroupsListSectionProps) {
+  const { t } = useT();
+
+  return (
+    <section style={{ margin: '1.5rem 0' }}>
+      <h2>{t('groups')}</h2>
+      {groups.length ? (
+        <div className="list">
+          {groups.map(g => {
+            const isEditing = editingGroupId === g.id;
+            if (isEditing) {
+              return (
+                <div className="card" key={g.id} style={{ background: '#f0fdfa', borderColor: '#99f6e4' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr)) auto auto', gap: '0.6rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="inline-edit-input"
+                      value={editGroupTitle}
+                      onChange={e => setEditGroupTitle(e.target.value)}
+                      placeholder={t('groupTitle')}
+                      disabled={busySaving}
+                      autoFocus
+                    />
+                    <select
+                      className="inline-edit-input"
+                      value={editGroupCourseId}
+                      onChange={e => setEditGroupCourseId(e.target.value)}
+                      disabled={busySaving}
+                    >
+                      {courses.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      className="inline-edit-input"
+                      value={editGroupDate}
+                      onChange={e => setEditGroupDate(e.target.value)}
+                      disabled={busySaving}
+                    />
+                    <button
+                      type="button"
+                      className="btn-inline-save"
+                      onClick={() => onSaveGroup(g.id)}
+                      disabled={busySaving}
+                      title={t('save')}
+                    >
+                      💾 {busySaving ? '…' : t('save')}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary btn-inline-cancel"
+                      onClick={() => setEditingGroupId(null)}
+                      disabled={busySaving}
+                      title={t('cancel')}
+                    >
+                      ✕ {t('cancel')}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            const c = courses.find(x => x.id === g.course_id);
+            return (
+              <div className="card row" key={g.id}>
+                <div>
+                  <b style={{ fontSize: '1rem', color: '#0f172a' }}>{g.title}</b>
+                  {c && <span style={{ color: '#0d9488', fontSize: '.88rem', marginLeft: '.6rem' }}>({c.name})</span>}
+                  {g.presentation_date && (
+                    <span style={{ color: '#64748b', fontSize: '.82rem', marginLeft: '.6rem' }}>
+                      📅 {g.presentation_date}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                  <button
+                    type="button"
+                    className="btn-inline-edit"
+                    onClick={() => {
+                      setEditingGroupId(g.id);
+                      setEditGroupTitle(g.title || '');
+                      setEditGroupDate(g.presentation_date || '');
+                      setEditGroupCourseId(g.course_id ? String(g.course_id) : '');
+                    }}
+                    title={t('edit')}
+                  >
+                    ✏️ {t('edit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="danger outline"
+                    style={{ fontSize: '.82rem', padding: '.25rem .55rem' }}
+                    onClick={() => onDeleteTarget({ path: `/groups/${g.id}`, label: g.title, type: t('group') })}
+                  >
+                    🗑️ {t('delete')}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p>{t('noItems')}</p>
+      )}
+    </section>
+  );
+}

@@ -11,6 +11,7 @@ export interface User {
 }
 
 export interface Branding {
+  enable_sample_fixture_button?: boolean;
   university_name?: string | { el: string; en: string };
   school_name?: string | { el: string; en: string };
   department_name?: string | { el: string; en: string };

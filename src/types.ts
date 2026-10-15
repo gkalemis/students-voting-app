@@ -43,6 +43,7 @@ export interface State {
   presentations?: any[];
   results?: Result[];
   branding: Brand;
+  theme_color?: string;
 }
 
 export interface User {

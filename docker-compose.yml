@@ -1,5 +1,6 @@
 services:
   data-init:
+    container_name: students-voting-init
     image: alpine:3.24.2
     command: ["sh", "-c", "mkdir -p /app/data/assets && chown -R 10001:10001 /app/data"]
     volumes:
@@ -7,6 +8,7 @@ services:
     restart: "no"
 
   voting-app:
+    container_name: students-voting
     build: .
     depends_on:
       data-init:

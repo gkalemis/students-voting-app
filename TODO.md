@@ -14,7 +14,7 @@ Planned work listed here is not represented as complete.
 - Build and smoke-test the AI Studio integration in Docker before deployment, including period creation, course/group/student workflow, session editing, activation, timed voting, completion, archive snapshots, deletion, and data persistence across restart.
 - Add authorization regression tests proving lecturers cannot read or mutate another lecturer's periods, courses, groups, students, sessions, or presentation controls.
 - Add an automated restore test for the preserved pre-deployment data archive before the next production rollout.
-- Generate and commit a root `package-lock.json` on a trusted network-enabled host; switch CI and Docker to `npm ci`.
+- Commit the generated root `package-lock.json` with the reviewed major upgrades; Docker and CI now use `npm ci` and pass validation.
 - Add automated API, authorization, persistence, voting, WebSocket, upload, and responsive UI tests for the replacement Node application.
 - Run TypeScript/build checks, browser E2E, image builds, dependency audits, and container scans.
 - Test first-login enforcement and `npm run reset-password -- USERNAME` with a disposable data directory while the server is stopped.

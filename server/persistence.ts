@@ -17,6 +17,13 @@ export function initPersistence(): boolean {
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === 'object') {
       Object.assign(db, parsed);
+      if (Array.isArray(db.users)) {
+        for (const u of db.users) {
+          if (u.theme_color === '#0e2a47' || u.theme_color === '#1d4ed8' || !u.theme_color) {
+            u.theme_color = '#0d9488';
+          }
+        }
+      }
       console.log(`[Database] Loaded persistent data from ${DB_FILE}`);
       return true;
     }

@@ -1,0 +1,32 @@
+{
+  "course": {
+    "name": "Πληροφορική & Τεχνολογία",
+    "description": "Δοκιμαστικό μάθημα για αξιολογήσεις παρουσιάσεων"
+  },
+  "period": {
+    "name": "Χειμερινό Εξάμηνο 2026"
+  },
+  "group": {
+    "title": "Ομάδα Α' - Ερευνητικές Εργασίες",
+    "presentation_date": "2026-11-15"
+  },
+  "students": [
+    {
+      "full_name": "Γεώργιος Παπαδόπουλος",
+      "presentation_title": "Τεχνητή Νοημοσύνη στην Εκπαίδευση"
+    },
+    {
+      "full_name": "Μαρία Ιωάννου",
+      "presentation_title": "Ασφάλεια Δεδομένων σε Cloud Υπηρεσίες"
+    },
+    {
+      "full_name": "Νικόλαος Δημητρίου",
+      "presentation_title": "Αρχιτεκτονική Microservices με Docker και Kubernetes"
+    }
+  ],
+  "criteria": [
+    { "name": "Επιστημονική τεκμηρίωση", "weight": 40 },
+    { "name": "Σαφήνεια και οργάνωση", "weight": 30 },
+    { "name": "Κριτική σκέψη", "weight": 30 }
+  ]
+}

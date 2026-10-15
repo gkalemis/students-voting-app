@@ -75,7 +75,7 @@ export function ResetPasswordModal({
             </p>
             <div className="actions" style={{ justifyContent: 'flex-end' }}>
               <button type="button" onClick={done}>
-                {t('actionDone')}
+                {t('close')}
               </button>
             </div>
           </div>

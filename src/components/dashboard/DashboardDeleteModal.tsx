@@ -20,6 +20,11 @@ export function DashboardDeleteModal({ target, onConfirm, onCancel }: Props) {
           <br />
           <b style={{ color: '#0f172a' }}>{target.label}</b> ({target.type})
         </p>
+        {target.type === t('group') && (
+          <p style={{ color: '#b91c1c', fontSize: '0.84rem', fontWeight: 650, background: '#fef2f2', border: '1px solid #fecaca', padding: '0.45rem 0.65rem', borderRadius: 6, margin: '0.6rem 0' }}>
+            ⚠️ {t('deleteGroupCascadeNotice')}
+          </p>
+        )}
         <div className="actions" style={{ marginTop: '1.2rem' }}>
           <button
             type="button"

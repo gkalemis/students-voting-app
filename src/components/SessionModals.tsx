@@ -152,18 +152,18 @@ export function CompleteModal({
   const { t } = useT();
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 460 }}>
-        <h2 style={{ color: '#dc2626' }}>⚠️ {t('complete')}</h2>
-        <p style={{ margin: '0.75rem 0', color: '#475569' }}>
-          {t('confirmComplete')}
+    <div className="modal" role="dialog" aria-modal="true" onClick={close}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+        <h2 style={{ color: '#dc2626', margin: '0 0 0.5rem 0' }}>⏹️ {t('endSession')}</h2>
+        <p style={{ margin: '0.75rem 0', color: '#475569', lineHeight: 1.5 }}>
+          {t('endSessionHint')}
         </p>
         <div className="actions" style={{ justifyContent: 'flex-end', marginTop: '1.25rem' }}>
           <button type="button" className="secondary" onClick={close}>
             {t('cancel')}
           </button>
-          <button type="button" className="danger" onClick={confirmComplete}>
-            {t('complete')}
+          <button type="button" className="danger" onClick={confirmComplete} style={{ fontWeight: 600 }}>
+            ⏹️ {t('endSession')}
           </button>
         </div>
       </div>

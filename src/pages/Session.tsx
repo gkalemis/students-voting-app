@@ -67,6 +67,13 @@ export function Session() {
   const isArchived = s.status === 'ARCHIVED';
   const fullJoinUrl = `${window.location.origin}/join/${s.public_id}`;
 
+  const allPresentationsFinished = Boolean(
+    s.status === 'ACTIVE' &&
+    s.presentations &&
+    s.presentations.length > 0 &&
+    s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')
+  );
+
   return (
     <Layout>
       <SessionHeader
@@ -82,6 +89,28 @@ export function Session() {
 
       {actions.err && <p className="error" role="alert">{actions.err}</p>}
       {actions.toastMsg && <p className="notice" role="status">{actions.toastMsg}</p>}
+
+      {allPresentationsFinished && (
+        <div className="card" style={{ background: '#ecfdf5', borderColor: '#6ee7b7', margin: '1.25rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', padding: '1rem 1.25rem', borderRadius: 12 }}>
+          <div>
+            <h3 style={{ margin: '0 0 0.25rem 0', color: '#065f46', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <span>🎉</span>
+              <span>{t('allPresentationsEvaluated')}</span>
+            </h3>
+            <p style={{ margin: 0, color: '#047857', fontSize: '0.88rem' }}>
+              {t('endSessionHint')}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="danger"
+            onClick={() => setShowCompleteModal(true)}
+            style={{ fontWeight: 600, padding: '0.55rem 1.2rem', fontSize: '0.95rem' }}
+          >
+            ⏹️ {t('endSession')}
+          </button>
+        </div>
+      )}
 
       {(s.status === 'COMPLETED' || isArchived) && (
         <ResultsExportSection sessionId={id} results={s.results} />

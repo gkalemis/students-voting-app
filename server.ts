@@ -165,7 +165,7 @@ async function startServer() {
 
   if (process.env.NODE_ENV === 'production' && fs.existsSync(path.resolve('dist'))) {
     app.use(express.static(path.resolve('dist')));
-    app.get('*', (req, res) => {
+    app.get('/{*path}', (req, res) => {
       res.sendFile(path.resolve('dist/index.html'));
     });
   } else {

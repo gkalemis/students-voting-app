@@ -4,13 +4,16 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { BrandHeader } from '../components/BrandHeader';
+import { getBrandingText } from '../utils/branding';
 import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
-import { VotingCountdown } from '../components/VotingCountdown';
 import { usePublic } from '../hooks/usePublic';
 import { WaitingQueue } from '../components/WaitingQueue';
 import { ResultsPodium } from '../components/ResultsPodium';
 import { safeStorage } from '../utils/storage';
+import { applyThemeColor } from '../theme';
+import { MobileVotingViewport } from '../components/join/MobileVotingViewport';
+import { VoteToast } from '../components/join/VoteToast';
 
 export function Join() {
   const { publicId = '' } = useParams();
@@ -20,6 +23,13 @@ export function Join() {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; title: string; subtitle?: string } | null>(null);
   const [pt, setPt] = useState('');
   const [isModified, setIsModified] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (s?.theme_color) {
+      applyThemeColor(s.theme_color);
+    }
+  }, [s?.theme_color]);
 
   useEffect(() => {
     const key = `vote_token_${publicId}`;
@@ -44,8 +54,15 @@ export function Join() {
     if (pt && s?.active_presentation) {
       api(`/public/sessions/${publicId}/my-vote`, { headers: { 'X-Participation-Token': pt } })
         .then(x => {
-          setScores(Object.fromEntries(Object.entries(x.scores as Record<string, number>).map(([k, v]) => [Number(k), v])) as Record<number, number>);
-          setIsModified(false);
+          if (x.scores && Object.keys(x.scores).length > 0) {
+            setScores(Object.fromEntries(Object.entries(x.scores as Record<string, number>).map(([k, v]) => [Number(k), v])) as Record<number, number>);
+            setIsModified(false);
+            setHasSubmitted(true);
+          } else {
+            setScores({});
+            setIsModified(false);
+            setHasSubmitted(false);
+          }
         })
         .catch(() => {});
     }
@@ -83,120 +100,52 @@ export function Join() {
         subtitle: language === 'el' ? 'Μπορείτε να αλλάξετε όσο η ψηφοφορία είναι ανοικτή' : 'Editable while voting remains open'
       });
       setIsModified(false);
-      setTimeout(() => setToast(null), 3200);
+      setHasSubmitted(true);
+      setTimeout(() => setToast(null), 3000);
       load();
     } catch (e) {
       setToast({
         type: 'error',
         title: translateError(e, language)
       });
-      setTimeout(() => setToast(null), 4000);
+      setTimeout(() => setToast(null), 3000);
     }
   }
 
   const gradedCount = Object.keys(scores).length;
   const allGraded = gradedCount === s.criteria.length;
 
-  const allClosed = Boolean(
-    s.presentations &&
-    s.presentations.length > 0 &&
-    s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')
-  );
-
   const showResults = Boolean(
     s.results &&
     s.results.length > 0 &&
     !s.active_presentation &&
-    (s.results_revealed || s.status === 'COMPLETED' || allClosed)
+    (s.results_revealed || s.status === 'COMPLETED')
   );
+
+  const universityName = getBrandingText(s.branding?.university_name, language) || t('app');
+  const schoolName = getBrandingText(s.branding?.school_name, language);
 
   return (
     <BrandedLayout state={s}>
-      <main className="mobile">
+      <main className="mobile-voting-main">
         {s.active_presentation ? (
-          /* ========================================================
-             SINGLE-SCREEN MOBILE VOTING EXPERIENCE
-             ======================================================== */
-          <div className="mobile-voting-viewport">
-            {/* Ultra-compact sticky top bar with student name and countdown timer */}
-            <header className="mobile-compact-topbar">
-              <div className="mobile-compact-left">
-                <span className="mobile-compact-avatar" aria-hidden="true">👤</span>
-                <div className="mobile-compact-info">
-                  <h2 className="mobile-compact-name">{s.active_presentation.presenter_name}</h2>
-                  {s.active_presentation.title && (
-                    <span className="mobile-compact-title" title={s.active_presentation.title}>
-                      {s.active_presentation.title}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="mobile-compact-right">
-                <VotingCountdown
-                  closesAt={s.active_presentation.closes_at}
-                  onExpire={load}
-                  isCompact={true}
-                />
-                <LanguageButton />
-              </div>
-            </header>
-
-            {/* Dense evaluation criteria (fits on one screen) */}
-            <div className="mobile-compact-body">
-              {s.criteria.map((c) => {
-                const currentVal = scores[c.id];
-                return (
-                  <div key={c.id} className="mobile-compact-criterion">
-                    <div className="mobile-criterion-header">
-                      <span className="mobile-criterion-name">{c.name}</span>
-                      <span className="mobile-criterion-weight">{c.weight}%</span>
-                    </div>
-
-                    <div className="mobile-rating-buttons" role="radiogroup" aria-label={c.name}>
-                      {[1, 2, 3, 4, 5].map(n => {
-                        const isSelected = currentVal === n;
-                        return (
-                          <button
-                            key={n}
-                            type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            className={`mobile-rating-btn rating-val-${n} ${isSelected ? 'selected' : ''}`}
-                            onClick={() => handleScoreChange(c.id, n)}
-                          >
-                            <span className="rating-digit">{n}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Compact bottom bar with progress status and high-visibility submit */}
-            <footer className="mobile-compact-footer">
-              <div className="mobile-footer-status">
-                <span className="mobile-progress-text">
-                  📊 {gradedCount}/{s.criteria.length} {t('gradesCompleted')}
-                </span>
-                {allGraded && <span className="mobile-progress-badge">✓ {t('actionDone')}</span>}
-              </div>
-
-              <button
-                type="button"
-                className={`mobile-submit-btn ${!allGraded || !pt ? 'disabled' : ''} ${isModified ? 'pulse' : ''}`}
-                disabled={!pt || !allGraded}
-                onClick={submit}
-              >
-                {t('submitRating')}
-              </button>
-            </footer>
-          </div>
+          <MobileVotingViewport
+            s={s}
+            universityName={universityName}
+            schoolName={schoolName}
+            scores={scores}
+            onScoreChange={handleScoreChange}
+            allGraded={allGraded}
+            gradedCount={gradedCount}
+            pt={pt}
+            isModified={isModified}
+            hasSubmitted={hasSubmitted}
+            onSubmit={submit}
+            onExpire={load}
+            language={language}
+            t={t}
+          />
         ) : showResults ? (
-          /* ========================================================
-             FINAL RESULTS PODIUM (SHOWN AUTOMATICALLY ON CLOSE/COMPLETE)
-             ======================================================== */
           <div className="mobile-results-container">
             <div className="public-tools" style={{ marginBottom: '0.75rem' }}>
               <LanguageButton />
@@ -205,9 +154,6 @@ export function Join() {
             <ResultsPodium rows={s.results} isProjector={false} />
           </div>
         ) : (
-          /* ========================================================
-             IDLE / WAITING FOR NEXT PRESENTATION
-             ======================================================== */
           <div className="mobile-idle-container">
             <div className="public-tools" style={{ marginBottom: '0.75rem' }}>
               <LanguageButton />
@@ -217,33 +163,7 @@ export function Join() {
           </div>
         )}
 
-        {toast && (
-          <div
-            className={`vote-toast-compact ${toast.type === 'error' ? 'toast-error' : 'toast-success'}`}
-            role="status"
-            onClick={() => setToast(null)}
-            title="Click to dismiss"
-          >
-            <span className="toast-icon" aria-hidden="true">
-              {toast.type === 'error' ? '⚠️' : '✓'}
-            </span>
-            <div className="toast-text-box">
-              <strong className="toast-title">{toast.title}</strong>
-              {toast.subtitle && <span className="toast-subtitle">{toast.subtitle}</span>}
-            </div>
-            <button
-              type="button"
-              className="toast-close-btn"
-              aria-label="Dismiss"
-              onClick={e => {
-                e.stopPropagation();
-                setToast(null);
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        {toast && <VoteToast toast={toast} onDismiss={() => setToast(null)} />}
       </main>
     </BrandedLayout>
   );

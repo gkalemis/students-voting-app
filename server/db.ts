@@ -21,7 +21,8 @@ export const db = {
     background_value: '#0e2a47',
     logo_url: null,
     background_image_url: null,
-    background_opacity: 0.12
+    background_opacity: 0.12,
+    enable_sample_fixture_button: true
   } as Branding,
   periods: [] as AcademicPeriod[],
   courses: [] as Course[],

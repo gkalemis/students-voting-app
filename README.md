@@ -30,7 +30,7 @@ The command prints a random temporary password once. The account must change it 
 ## Development
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 

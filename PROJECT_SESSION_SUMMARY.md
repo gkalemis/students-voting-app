@@ -1,8 +1,52 @@
 # Project session summary
 
-Last updated: 2026-10-10
+Last updated: 2026-10-15
 
 Current release candidate: 2.4.0
+
+## Publication preparation — 2026-10-15
+
+- User authorized committing and pushing the pending AI Studio import, major package upgrades/lockfile, deployment workflow, container names and login credential-panel removal together to production `main`. Remote branch was verified at local base `c297fde` before commit.
+- Final whitespace, ShellCheck, Compose and credential-pattern checks passed. Runtime `.env`, production data and backup archives are excluded. Source and image backups documented below remain available.
+- SSH agent had no loaded identity; authenticated GitHub CLI HTTPS transport is available for this publication without changing the configured SSH remote. Commit/push outcome is reported directly after executing the operation.
+
+## Deployment workflow update — 2026-10-15
+
+- Updated `deploy.sh` for reviewed production GitHub pulls: `--check` fetches and reports synchronization/incoming commits and file changes without Docker activity. Normal execution prompts before a behind-only fast-forward, archives the current source in `backups/pre-pull-*`, merges the exact fetched/reviewed commit and restarts the updated script. Dirty, ahead and diverged branches remain blocked; no force operations, auto-stashes, pushes, or raw AI Studio imports are performed.
+- Corrected rollback handling by using an EXIT trap: explicit failed health/header/backup validations now restore the previous image as well as command errors. Replaced archive-listing pipe with a complete contents file and added transient public-health retries.
+- Updated `DEPLOYMENT.md` with preview, review, pull and deploy commands, separate AI Studio/production repository responsibilities and image-only rollback limits. This supersedes older statements that the deploy script never pulls Git.
+- PASS: ShellCheck, Bash syntax, Compose validation, whitespace checks. Mocked Docker/Git cases passed synchronized/behind previews, dirty/ahead/diverged refusal before Docker activity, and unhealthy-deployment image rollback. Test harness/evidence: `/tmp/voting-deploy-test/` and `/tmp/voting-deploy-cases-tzvdNG/`. No real deployment or pull was performed by these tests.
+- Current local feature, dependency and deployment workflow changes remain uncommitted; commit and push reviewed changes before routine use of the script. The tracked handoff summary remains modified and is not automatically published.
+
+## Verified production rollout — 2026-10-15
+
+- User authorized deployment of the imported features and major dependency upgrades. Deployed tested image `sha256:bc2a7f1b6ff861586ed6edc6619f627b61b136ca86dfaa44155ca560ae6da5c2`; `students-voting` reached healthy status. Public HTTPS health, homepage security headers, unpublished host port and running image identity passed verification.
+- Created a consistent stopped-app data backup at `backups/pre-major-deploy-20261015-215157/data.tar.gz`; verified archive listing and `db.json`. SHA-256: `a9ed62183bd570c5ddcd243476c943b1b668223393d633a88e15311d27631be1`. Previous production image retained as `students-voting-backup:production-before-major`.
+- Used `/tmp/deploy-students-reviewed.sh` for the explicitly authorized image rollout because the normal `deploy.sh` correctly refuses uncommitted source. ShellCheck and shell syntax validation passed. Automatic previous-image recovery was armed but not needed. No Git commits or pushes were performed; application health still reports the unchanged package version `2.4.0`.
+- This rollout supersedes earlier statements that the October 15 changes are not deployed. Next: browser acceptance and committing/pushing the reviewed local changes when authorized.
+
+## Major dependency upgrades — 2026-10-15
+
+- Before modifying dependencies, created and verified `backups/pre-major-upgrades-20261015-214831/source.tar.gz`, containing the current source including uncommitted imports and local edits, excluding secrets, production data, Git internals, installed dependencies and previous backups. SHA-256: `1ec183caaf1cc977a7e3fee1544fe2a268766ddd32dc82bac0c49d5c53c09cd6`. Preserved the prior built image as `students-voting-backup:pre-major-20261015`. Production data was not changed.
+- Supersedes the earlier deferral: upgraded Express to 5.3.0, bcryptjs to 3.0.3, Multer to 2.4.0, Vite to 8.3.4, React plugin to 6.1.2, TypeScript to 7.0.2 and Multer types to 2.3.0. Removed obsolete bcryptjs type package because bcryptjs includes its own types. Kept Node 22 runtime and matching Node 22 types. Verified package versions and engine requirements with the npm registry.
+- Migrated Express wildcard SPA route to `/{*path}`. Generated root `package-lock.json` and switched Docker/CI/documented installs to `npm ci`. npm audit reported zero vulnerabilities on the host and in both Docker install stages.
+- PASS: lint, host production build, Docker production build, Compose validation and whitespace checks. PASS: isolated API suite and full production-startup suite covering root/deep links, password login/replacement, rejected SVG and accepted PNG upload/static serving. Tests used disposable tmpfs data and no external network or production mounts; scripts are `/tmp/voting-import-smoke.mjs` and `/tmp/voting-major-runtime.mjs`.
+- Upgraded built image: `sha256:bc2a7f1b6ff861586ed6edc6619f627b61b136ca86dfaa44155ca560ae6da5c2`. No deployment, commit or push was performed. The earlier image backup enables rollback independently of source restoration. Browser acceptance and authorized rollout remain next steps.
+
+## AI Studio update — 2026-10-15
+
+- Integrated application changes from `gkalemis/students-voting-app-aistudio` commit `5bfd1fef434293b77f061f4c1ee4dbadb0668faa`, relative to imported baseline `d87303f`: resource editing and owner labels, administration accordions, mobile voting layout/toasts/countdown, dashboard refactoring, presenter controls, sample fixture loader and administrator demo session.
+- Preserved pending local login credential-panel removal and shorter container names. Retained hardened authentication, uploads, WebSocket checks, environment configuration, Traefik labels and bind mounts. Added resource-move ownership/hierarchy validation, validated sample-feature flag persistence, and isolated demo selection from real classroom sessions. Demo voting receives a timed closing deadline. Docker runtime now includes sample fixture files.
+- Kept the existing dependency versions; upstream major upgrades to Express, Vite, TypeScript and associated packages were not imported and require separate compatibility validation. Design mockup images and AI Studio internal artifacts were not imported because application code does not reference them.
+- Verified `docker compose config --quiet`, `git diff --check`, and Docker production build (TypeScript and Vite). Built image: `sha256:5e30a4e45ae58e943d5a3f01c4f82f1b4d071a576e23e6bf16dbffefa40f6050`.
+- Disposable image test with no network or production mount passed fixture import, resource editing, cross-user ownership rejection, administrator feature toggle, demo authorization and voting deadline checks. The temporary test script is `/tmp/voting-import-smoke.mjs`.
+- Production `students-voting` remains healthy on existing image `sha256:4e1c4809fe3c1cef040db79ff82b74c54315b9fe93c7353a3b8948bec1ba51d8`; no deployment was performed. All imported changes remain uncommitted on `main` at `c297fde`. Next: browser workflow review and authorized deployment; commit/push only when requested.
+
+## Verified container naming update — 2026-10-14
+
+- Applied explicit container names `students-voting` and `students-voting-init` in `docker-compose.yml` with user authorization. Compose service keys remain `voting-app` and `data-init`, so existing service commands and deployment scripts remain compatible.
+- Recreated only the application using the existing image. It is healthy and `/api/health` returns version `2.4.0`. The initializer was created but not started. Bind mounts, networks, Traefik labels, and unpublished port 3000 are unchanged.
+- `docker compose config --quiet` and `git diff --check` passed. Repository branch is `main`, HEAD is `c297fde`; the tracked summary, Compose file, and earlier login-credential removal are uncommitted. No commit or push was performed.
 
 ## 2026-10-10 architecture replacement and security repair
 
@@ -101,6 +145,10 @@ Current release candidate: 2.4.0
 - AI Studio integration TypeScript/Vite and Docker build: BLOCKED in this Codex session because dependencies are not installed and the sandbox cannot access `/var/run/docker.sock`; the operator must run `docker compose build voting-app` before any deployment.
 
 ## Unresolved/next steps
+
+- Reviewed AI Studio repository `gkalemis/students-voting-app-aistudio` at `d87303f3c23057de81eca80eecfa9d77fc1e3be9` on 2026-10-12 using a disposable HTTPS checkout. Its entire `src/` and `server/` trees match the previously imported ZIP; there are no new application changes to integrate. Only Dockerfile presence, omitted bun lockfile, and generated TypeScript build metadata differ. Preserved the hardened production deployment and the pending removal of login test credentials. SSH access failed because the key is unavailable to this process; public HTTPS read access succeeded.
+
+- Removed the public login screen's test-credential panel and credential autofill buttons in both languages at the user's request. Login authentication is unchanged. Static credential-hint scan and diff whitespace validation passed; rebuild the application image to publish this UI change.
 
 - Run `docker compose build voting-app`; if it passes, review the diff and commit it. Do not run `./deploy.sh` until the new image and manual disposable-data workflow checks pass.
 - On a network-enabled development host, install dependencies and run the exact commands in `TESTING.md`; correct any runtime or type-check issue they reveal.

@@ -6,9 +6,11 @@ import { FormKind } from '../../types';
 interface Props {
   onOpen: (kind: FormKind) => void;
   onOpenImport: () => void;
+  onLoadSampleFixture: () => void;
+  enableSampleFixtureButton?: boolean;
 }
 
-export function WorkflowBar({ onOpen, onOpenImport }: Props) {
+export function WorkflowBar({ onOpen, onOpenImport, onLoadSampleFixture, enableSampleFixtureButton = true }: Props) {
   const { t, language } = useT();
 
   return (
@@ -64,14 +66,28 @@ export function WorkflowBar({ onOpen, onOpenImport }: Props) {
         <span className="panel-section-title" lang="el">
           {language === 'el' ? toGreekUppercase('2. Μαζικά εργαλεία') : '2. Bulk utilities'}
         </span>
-        <button
-          type="button"
-          onClick={onOpenImport}
-          className="outline import-csv-btn dashboard-import-btn"
-        >
-          <span>📥</span>
-          <span>{t('importCsv')}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={onOpenImport}
+            className="outline import-csv-btn dashboard-import-btn"
+          >
+            <span>📥</span>
+            <span>{t('importCsv')}</span>
+          </button>
+          {enableSampleFixtureButton && (
+            <button
+              type="button"
+              onClick={onLoadSampleFixture}
+              className="outline import-csv-btn dashboard-import-btn"
+              style={{ borderColor: '#0ea5e9', color: '#0ea5e9' }}
+              title={language === 'el' ? 'Φόρτωση δοκιμαστικού πακέτου συνεδρίας από fixtures' : 'Load sample session fixture package'}
+            >
+              <span>📦</span>
+              <span>{t('loadSampleFixture')}</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

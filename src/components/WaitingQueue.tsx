@@ -10,18 +10,28 @@ export function WaitingQueue({ s }: { s: State }) {
   const isCompleted = s.status === 'COMPLETED';
   const presentations = s.presentations || [];
   const pendingPresentations = presentations.filter(p => p.status === 'PENDING');
+  const allClosed = Boolean(
+    presentations.length > 0 &&
+    presentations.every(p => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES')
+  );
 
   return (
-    <section className="card" style={{ marginTop: '1.25rem', textAlign: 'center', padding: '2rem 1.25rem' }}>
-      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>
-        {isCompleted ? '🏁' : '⏳'}
+    <section className="card" style={{ marginTop: '1.25rem', textAlign: 'center', padding: '1.75rem 1.25rem', borderRadius: 14 }}>
+      <div style={{ fontSize: '2.5rem', marginBottom: '0.65rem' }}>
+        {isCompleted ? '🏁' : allClosed ? '🎉' : '⏳'}
       </div>
-      <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.35rem', color: '#0f172a' }}>
-        {isCompleted ? t('sessionCompleted') : t('waitingPresentation')}
-      </h2>
-      <p style={{ color: '#475569', fontSize: '0.95rem', maxWidth: '380px', margin: '0 auto 1.5rem auto' }}>
+      <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>
         {isCompleted
           ? t('sessionCompleted')
+          : allClosed
+          ? t('waitingLecturerToEndSession')
+          : t('waitingPresentation')}
+      </h2>
+      <p style={{ color: '#475569', fontSize: '0.92rem', maxWidth: '420px', margin: '0 auto 1.25rem auto', lineHeight: 1.5 }}>
+        {isCompleted
+          ? t('sessionCompleted')
+          : allClosed
+          ? t('allPresentationsEvaluated')
           : t('autoUpdate')}
       </p>
 
@@ -43,14 +53,14 @@ export function WaitingQueue({ s }: { s: State }) {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '0.65rem 0.85rem',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   background: p.status === 'VOTING_OPEN' ? '#fef2f2' : '#f8fafc',
-                  border: '1px solid',
+                  border: '1.5px solid',
                   borderColor: p.status === 'VOTING_OPEN' ? '#fecaca' : '#e2e8f0'
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 650, fontSize: '0.92rem', color: '#0f172a' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a' }}>
                     {idx + 1}. {p.presenter_name}
                   </div>
                   {p.title && (

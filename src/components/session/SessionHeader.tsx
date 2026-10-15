@@ -64,8 +64,26 @@ export function SessionHeader({
           )}
 
           {s.status === 'ACTIVE' && (
-            <button type="button" className="danger" onClick={onShowComplete}>
-              ⏹️ {t('completeSession')}
+            <button
+              type="button"
+              className="danger"
+              onClick={onShowComplete}
+              title={t('endSessionHint')}
+              style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              ⏹️ {t('endSession')}
+            </button>
+          )}
+
+          {s.public_id && (
+            <button
+              type="button"
+              className="btn-student-phone-preview"
+              onClick={() => window.open(`/join/${s.public_id}`, '_blank', 'noopener,noreferrer')}
+              title={language === 'el' ? 'Προβολή της οθόνης ψηφοφορίας φοιτητών στο κινητό σε νέα καρτέλα' : 'Preview student voting phone view in a new tab'}
+            >
+              <span>📱</span>
+              <span>{language === 'el' ? 'Προβολή Κινητού (Demo)' : 'Student Phone View (Demo)'}</span>
             </button>
           )}
 

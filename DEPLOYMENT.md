@@ -46,7 +46,19 @@ For routine reviewed deployments, use the one-step operator script:
 ./deploy.sh
 ```
 
-It requires a clean Git working tree, fetches the configured upstream, and deploys only when local `HEAD` exactly matches that upstream. When GitHub differs, it prints the relevant commits and changed paths and stops before Docker activity; review and run `git pull --ff-only` manually. It then validates Compose, builds before downtime, creates and validates a private timestamped data backup, recreates only `voting-app`, waits for health, verifies public HTTPS/security headers, and confirms that port 3000 is not published. It never pulls or pushes Git. If deployment fails after stopping the service, it retags and recreates the previous image automatically.
+First preview GitHub changes without pulling or deploying:
+
+```bash
+./deploy.sh --check
+```
+
+The script requires a clean Git working tree and fetches the current branch's configured upstream. If local source is behind, it shows incoming commits, a change summary and file paths. Review the full diff with `git diff HEAD..origin/main`. Run `./deploy.sh` and type `yes` to accept the displayed changes: it archives the current committed source under `backups/pre-pull-*`, fast-forwards to the exact reviewed commit, and restarts the updated script. It refuses local changes, unpushed commits and diverged branches without discarding anything. It never pushes Git.
+
+The upstream is the reviewed production repository (`origin`), not the separate AI Studio repository. AI Studio changes must first be integrated and tested before reaching production `main`; this script does not merge raw AI Studio output. Fast-forward eligibility does not verify security or application correctness.
+
+After synchronization, it validates Compose, builds using the committed lockfile before downtime, creates and validates a private timestamped data backup, recreates only `voting-app`, waits for health, verifies public HTTPS/security headers, and confirms that port 3000 is not published. If deployment fails after stopping the service, including a failed validation, it retags and recreates the previous image automatically. Image rollback does not restore data; schema-changing releases need a separately reviewed data rollback procedure.
+
+Commit and push the currently integrated local changes before using this workflow; an uncommitted working tree stops the script before fetching or deployment.
 
 `data-init` exiting with code 0 is expected. It prepares the bind-mounted data directory for the non-root application UID. Do not run multiple application or CLI writers against `data/db.json` concurrently.
 

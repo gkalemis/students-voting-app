@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
-import { UserForm, LogoUpload } from '../components/AdminForms';
+import { UserForm } from '../components/AdminForms';
 import { ResetPasswordModal, DeleteUserModal } from '../components/AdminModals';
 import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
 import { UserCard } from '../components/admin/UserCard';
 import { ResetDbModal } from '../components/admin/ResetDbModal';
-import { getBrandingText } from '../utils/branding';
+import { AdminBrandingSection } from '../components/admin/AdminBrandingSection';
 
 export function Admin() {
   const { user: currentUser } = useAuth();
@@ -21,7 +21,25 @@ export function Admin() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [showResetDbModal, setShowResetDbModal] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessageState] = useState('');
+  const msgTimerRef = useRef<any>(null);
+
+  const setMessage = (msg: string) => {
+    setMessageState(msg);
+    if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    if (msg) {
+      msgTimerRef.current = setTimeout(() => {
+        setMessageState('');
+      }, 3000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (msgTimerRef.current) clearTimeout(msgTimerRef.current);
+    };
+  }, []);
+
   const [error, setError] = useState('');
 
   async function handleResetDb() {
@@ -99,93 +117,13 @@ export function Admin() {
       </section>
 
       {/* Global Academic Branding Settings */}
-      <section style={{ margin: '2rem 0' }}>
-        <h2>🏛️ {t('academicBranding')}</h2>
-        <p style={{ color: '#555', fontSize: '.9rem', margin: '0 0 1rem 0' }}>
-          {language === 'el'
-            ? 'Ορίστε τα επίσημα στοιχεία του ιδρύματος και το λογότυπο που θα εμφανίζονται σε όλες τις προβολές.'
-            : 'Set the official university branding and logo that appears across all views.'}
-        </p>
-
-        <div className="card" style={{ maxWidth: 640 }}>
-          <form onSubmit={async e => {
-            e.preventDefault();
-            setError('');
-            try {
-              await api('/branding', json('PUT', brand));
-              setMessage(t('brandingUpdated'));
-              load();
-            } catch (err) {
-              setError(translateError(err, language));
-            }
-          }}>
-            <LogoUpload
-              saved={b => { setBrand(b); setMessage(t('brandingUpdated')); }}
-              failed={e => setError(translateError(e, language))}
-            />
-
-            <label>
-              {language === 'el' ? 'Όνομα Ιδρύματος (Ελληνικά)' : 'University Name (Greek)'}
-              <input
-                value={getBrandingText(brand.university_name, 'el')}
-                onChange={e => setBrand({
-                  ...brand,
-                  university_name: {
-                    el: e.target.value,
-                    en: getBrandingText(brand.university_name, 'en')
-                  }
-                })}
-              />
-            </label>
-
-            <label>
-              {language === 'el' ? 'Όνομα Ιδρύματος (English)' : 'University Name (English)'}
-              <input
-                value={getBrandingText(brand.university_name, 'en')}
-                onChange={e => setBrand({
-                  ...brand,
-                  university_name: {
-                    el: getBrandingText(brand.university_name, 'el'),
-                    en: e.target.value
-                  }
-                })}
-              />
-            </label>
-
-            <label>
-              {language === 'el' ? 'Όνομα Σχολής / Τμήματος (Ελληνικά)' : 'Faculty / School Name (Greek)'}
-              <input
-                value={getBrandingText(brand.school_name, 'el')}
-                onChange={e => setBrand({
-                  ...brand,
-                  school_name: {
-                    el: e.target.value,
-                    en: getBrandingText(brand.school_name, 'en')
-                  }
-                })}
-              />
-            </label>
-
-            <label>
-              {language === 'el' ? 'Όνομα Σχολής / Τμήματος (English)' : 'Faculty / School Name (English)'}
-              <input
-                value={getBrandingText(brand.school_name, 'en')}
-                onChange={e => setBrand({
-                  ...brand,
-                  school_name: {
-                    el: getBrandingText(brand.school_name, 'el'),
-                    en: e.target.value
-                  }
-                })}
-              />
-            </label>
-
-            <div style={{ marginTop: '1rem' }}>
-              <button type="submit">{t('saveBranding')}</button>
-            </div>
-          </form>
-        </div>
-      </section>
+      <AdminBrandingSection
+        brand={brand}
+        setBrand={setBrand}
+        onSuccess={setMessage}
+        onError={setError}
+        onReload={load}
+      />
 
       {/* Global Academic Periods & Academic Structure Cascade Removal Panel */}
       <AdminRemovalPanel reloadUsers={load} />
@@ -204,9 +142,8 @@ export function Admin() {
             type="button"
             className="danger"
             onClick={() => setShowResetDbModal(true)}
-            style={{ fontWeight: 600 }}
           >
-            🗑️ {t('resetDatabase')}
+            {t('resetDatabase')}
           </button>
         </div>
       </section>
@@ -214,7 +151,7 @@ export function Admin() {
       {showAdd && (
         <UserForm
           close={() => setShowAdd(false)}
-          saved={() => { setShowAdd(false); setMessage(t('userCreated')); load(); }}
+          saved={() => { setShowAdd(false); setMessage(t('lecturerCreated')); load(); }}
           failed={e => setError(translateError(e, language))}
         />
       )}
@@ -223,7 +160,11 @@ export function Admin() {
         <ResetPasswordModal
           user={resetTarget}
           close={() => setResetTarget(null)}
-          done={() => { setMessage(t('resetPasswordSuccess')); setResetTarget(null); load(); }}
+          done={() => {
+            setResetTarget(null);
+            setMessage(t('resetPasswordSuccess'));
+            load();
+          }}
           failed={e => setError(translateError(e, language))}
         />
       )}
@@ -237,11 +178,13 @@ export function Admin() {
         />
       )}
 
-      <ResetDbModal
-        show={showResetDbModal}
-        onConfirm={handleResetDb}
-        onCancel={() => setShowResetDbModal(false)}
-      />
+      {showResetDbModal && (
+        <ResetDbModal
+          show={showResetDbModal}
+          onCancel={() => setShowResetDbModal(false)}
+          onConfirm={handleResetDb}
+        />
+      )}
     </Layout>
   );
 }

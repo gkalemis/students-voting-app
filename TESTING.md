@@ -3,13 +3,15 @@
 ## Automated checks
 
 ```bash
-npm install
+npm ci
 npm run lint
 npm run build
 docker compose config --quiet
 ```
 
-GitHub Actions runs these checks for pushes and pull requests. Dependabot monitors root npm, Docker, and workflow dependencies. A committed lockfile is still required before changing installation commands to `npm ci`.
+GitHub Actions runs these checks for pushes and pull requests. Dependabot monitors root npm, Docker, and workflow dependencies. `package-lock.json` fixes resolved versions; Docker and CI use `npm ci`. Commit the manifest and lockfile together when updating dependencies.
+
+The 2026-10-15 major upgrade passed host and Docker builds with Express 5.3, bcryptjs 3.0, Multer 2.4, Vite 8.3, React plugin 6.1 and TypeScript 7.0. Isolated disposable-container checks covered production startup, root and SPA deep links, login/password replacement, accepted/rejected uploads, sample import, resource ownership, and demo authorization/timers. Browser acceptance remains a separate deployment check.
 
 ## Container smoke test
 

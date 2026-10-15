@@ -75,7 +75,7 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
     setBusyDelete(true);
     try {
       await api(`/groups/${activeGroupId}/students/${deleteTarget.id}`, json('DELETE'));
-      setMessage(t('actionDone'));
+      setMessage(language === 'el' ? 'Ο φοιτητής αφαιρέθηκε επιτυχώς.' : 'Student removed successfully.');
       setDeleteTarget(null);
       load();
       onStudentsChanged?.();
@@ -83,6 +83,18 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
       setMessage(translateError(e, language));
     } finally {
       setBusyDelete(false);
+    }
+  }
+
+  async function handleUpdateStudent(studentId: number, data: { full_name: string; presentation_title?: string | null }) {
+    try {
+      await api(`/students/${studentId}`, json('PUT', data));
+      setMessage(t('saved'));
+      load();
+      onStudentsChanged?.();
+    } catch (e) {
+      setMessage(translateError(e, language));
+      throw e;
     }
   }
 
@@ -212,6 +224,7 @@ export function StudentManager({ groups, onOpenImport, onStudentsChanged }: Stud
               students={filteredStudents}
               searchQuery={searchQuery}
               onDelete={setDeleteTarget}
+              onUpdate={handleUpdateStudent}
             />
           </div>
         </div>

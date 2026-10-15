@@ -18,13 +18,15 @@ export function ResourceForm({
   kind, courses, periods, groups, close, saved, failed
 }: ResourceFormProps) {
   const { t } = useT();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [courseId, setCourse] = useState(String(courses[0]?.id || ''));
   const [periodId, setPeriod] = useState(String(periods[0]?.id || ''));
   const [groupId, setGroup] = useState(String(groups[0]?.id || ''));
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [busy, setBusy] = useState(false);
+  const [description, setDescription] = useState('');
+  const initialGroup = kind === 'session' ? (groups.find(x => String(x.id) === String(groups[0]?.id)) || groups[0]) : null;
+  const [name, setName] = useState(kind === 'session' ? (initialGroup?.title || '') : '');
+  const [isNameManuallyEdited, setIsNameManuallyEdited] = useState(false);
   const [sessionCriteria, setSessionCriteria] = useState<{ name: string; weight: number }[]>([
     { name: t('criterionScience'), weight: 40 },
     { name: t('criterionClarity'), weight: 30 },
@@ -46,9 +48,22 @@ export function ResourceForm({
       setCourse(String(matchingCourses[0].id));
     }
     if (kind === 'session' && filtered.length && !filtered.some(x => String(x.id) === groupId)) {
-      setGroup(String(filtered[0].id));
+      const nextGid = String(filtered[0].id);
+      setGroup(nextGid);
+      if (!isNameManuallyEdited && filtered[0]?.title) {
+        setName(filtered[0].title);
+      }
     }
   }, [courseId, periodId]);
+
+  useEffect(() => {
+    if (kind === 'session' && !isNameManuallyEdited) {
+      const current = groups.find(x => String(x.id) === groupId) || filtered[0];
+      if (current?.title) {
+        setName(current.title);
+      }
+    }
+  }, [kind, groupId, isNameManuallyEdited]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,12 +80,13 @@ export function ResourceForm({
       }
       if (kind === 'session') {
         const selected = groups.find(x => String(x.id) === groupId);
+        const sessionTitle = name.trim() || selected?.title || null;
         const r = await api('/sessions', json('POST', {
           course_id: Number(courseId),
           period_id: Number(periodId),
           group_id: Number(groupId),
           session_date: selected?.presentation_date || date,
-          title: name || null,
+          title: sessionTitle,
           criteria: sessionCriteria
         }));
         saved();
@@ -97,7 +113,16 @@ export function ResourceForm({
         {kind === 'session' && (
           <label>
             {t('sessionTitle')}
-            <input value={name} onChange={e => setName(e.target.value)} maxLength={200} autoFocus />
+            <input
+              value={name}
+              onChange={e => {
+                setName(e.target.value);
+                setIsNameManuallyEdited(true);
+              }}
+              placeholder={groups.find(x => String(x.id) === groupId)?.title || t('sessionTitle')}
+              maxLength={200}
+              autoFocus
+            />
           </label>
         )}
         {kind === 'course' && (
@@ -146,7 +171,18 @@ export function ResourceForm({
         {kind === 'session' && (
           <label>
             {t('group')}
-            <select value={groupId} onChange={e => setGroup(e.target.value)} required>
+            <select
+              value={groupId}
+              onChange={e => {
+                const nextGid = e.target.value;
+                setGroup(nextGid);
+                if (!isNameManuallyEdited) {
+                  const grp = groups.find(x => String(x.id) === nextGid);
+                  if (grp?.title) setName(grp.title);
+                }
+              }}
+              required
+            >
               {filtered.map(x => (
                 <option value={x.id} key={x.id}>{x.title} · {x.presentation_date}</option>
               ))}
