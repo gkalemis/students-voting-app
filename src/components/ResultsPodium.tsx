@@ -63,7 +63,7 @@ export function ResultsPodium({ rows = [], isProjector = false }: ResultsPodiumP
       case 2:
         return {
           icon: '🥈',
-          label: language === 'el' ? '2η ΘΕΣΗ · ΑΣΗΜΙ' : '2nd PLACE · SILVER',
+          label: language === 'el' ? '2η ΘΕΣΗ · ΑΡΓΥΡΟ' : '2nd PLACE · SILVER',
           badgeClass: 'podium-badge-silver',
           cardClass: 'podium-card-silver',
           glowColor: 'rgba(148, 163, 184, 0.25)',

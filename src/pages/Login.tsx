@@ -7,8 +7,10 @@ import { translateError } from '../i18n';
 import { Brand } from '../types';
 import { BrandHeader } from '../components/BrandHeader';
 import { LanguageButton } from '../components/LanguageButton';
-
+import { AppFooter } from '../components/AppFooter';
+import { PasswordInput } from '../components/PasswordInput';
 import { safeStorage } from '../utils/storage';
+import { applyThemeColor } from '../theme';
 
 export function Login() {
   const nav = useNavigate();
@@ -20,6 +22,7 @@ export function Login() {
   const [brand, setBrand] = useState<Brand>();
 
   useEffect(() => {
+    applyThemeColor('#0d9488');
     api('/public/branding').then(setBrand).catch(() => {});
   }, []);
 
@@ -37,41 +40,48 @@ export function Login() {
   }
 
   return (
-    <main className="center">
-      <section className="card login">
-        <div className="corner-language">
-          <LanguageButton />
-        </div>
-        <BrandHeader brand={brand} />
-        <h1>{t('login')}</h1>
+    <div className="login-page-wrapper">
+      <main className="login-main-container">
+        <section className="card login">
+          <div className="login-top-bar">
+            <div className="login-brand-wrapper">
+              <BrandHeader brand={brand} />
+            </div>
+            <div className="login-lang-wrapper">
+              <LanguageButton />
+            </div>
+          </div>
 
-        <form onSubmit={go}>
-          <label>
-            {t('username')}
-            <input
-              value={username}
-              onChange={e => setU(e.target.value)}
-              autoComplete="username"
-              required
-            />
-          </label>
-          <label>
-            {t('password')}
-            <input
-              type="password"
-              value={password}
-              onChange={e => setP(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <h1 className="login-heading">{t('login')}</h1>
 
-          {err && <p className="error" role="alert">{err}</p>}
+          <form onSubmit={go} className="login-form">
+            <label>
+              {t('username')}
+              <input
+                value={username}
+                onChange={e => setU(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
+            <label>
+              {t('password')}
+              <PasswordInput
+                value={password}
+                onChange={e => setP(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
 
-          <button style={{ width: '100%', marginTop: '.5rem' }}>{t('login')}</button>
-        </form>
+            {err && <p className="error" role="alert">{err}</p>}
 
-      </section>
-    </main>
+            <button className="primary login-submit-btn">{t('login')}</button>
+          </form>
+
+        </section>
+      </main>
+      <AppFooter />
+    </div>
   );
 }

@@ -121,8 +121,8 @@ export function AdminBrandingSection({
             <input
               type="checkbox"
               id="enableSampleFixture"
-              checked={brand.enable_sample_fixture_button ?? true}
-              onChange={e => setBrand({ ...brand, enable_sample_fixture_button: e.target.checked })}
+              checked={(brand.enable_sample_fixture_button ?? true) && (brand.enable_demo ?? true)}
+              onChange={e => setBrand({ ...brand, enable_sample_fixture_button: e.target.checked, enable_demo: e.target.checked })}
               style={{ width: 'auto', margin: 0 }}
             />
             <label htmlFor="enableSampleFixture" style={{ margin: 0, fontWeight: 500, cursor: 'pointer' }}>

@@ -210,20 +210,25 @@
   box-shadow: 0 8px 30px rgba(249, 115, 22, 0.8) !important;
 }
 
-/* Calm submitted state when vote is safely stored and unchanged: SOLID GREEN */
+/* Calm submitted state when vote is safely stored: SOLID GREEN */
 .mobile-submit-btn.submitted:not(.modified) {
   background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
   border: 1.5px solid #a7f3d0 !important;
-  box-shadow: 0 3px 14px rgba(16, 185, 129, 0.35) !important;
+  box-shadow: none !important;
   animation: none !important;
 }
 
 /* Disabled state */
+.mobile-submit-btn:disabled,
 .mobile-submit-btn.disabled {
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
+.mobile-submit-btn:disabled:not(.submitted):not(.modified) {
   background: #94a3b8 !important;
   border-color: transparent !important;
-  box-shadow: none !important;
-  cursor: not-allowed;
-  opacity: 0.65;
-  animation: none !important;
 }

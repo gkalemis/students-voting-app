@@ -29,7 +29,7 @@ export function UserCard({ user, currentUserId, onToggle, onReset, onDelete }: P
         </div>
       </div>
 
-      <div className="user-actions">
+      <div className="user-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
         {user.id !== currentUserId && (
           <button
             className={`btn-action-sm ${user.active ? 'secondary' : 'primary'}`}

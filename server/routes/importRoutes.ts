@@ -5,6 +5,7 @@ import { db } from '../db';
 import { authMiddleware } from '../middleware';
 import { User, Course, Student } from '../types';
 import { parseCsvText, extractRows, CsvRow } from '../csvParser';
+import { scheduleSave } from '../persistence';
 
 export const importRouter = Router();
 importRouter.use(authMiddleware);
@@ -12,7 +13,7 @@ importRouter.use(authMiddleware);
 // Load sample session fixture
 importRouter.post('/import/sample-fixture', (req, res) => {
   const user = (req as any).user as User;
-  if (user.role !== 'ADMIN' && (db.globalBranding as any).enable_sample_fixture_button === false) {
+  if (db.globalBranding.enable_sample_fixture_button === false || db.globalBranding.enable_demo === false) {
     return res.status(403).json({ error: 'Η λειτουργία φόρτωσης δοκιμαστικού πακέτου έχει απενεργοποιηθεί από τον διαχειριστή.' });
   }
   let fixtureData: any;
@@ -31,9 +32,9 @@ importRouter.post('/import/sample-fixture', (req, res) => {
           { full_name: 'Μαρία Ιωάννου', presentation_title: 'Ασφάλεια Δεδομένων σε Cloud Υπηρεσίες' }
         ],
         criteria: [
-          { name: 'Επιστημονική τεκμηρίωση', weight: 40 },
-          { name: 'Σαφήνεια και οργάνωση', weight: 30 },
-          { name: 'Κριτική σκέψη', weight: 30 }
+          { name: 'Τεκμηρίωση', weight: 40 },
+          { name: 'Λογική Δομή', weight: 30 },
+          { name: 'Παρουσίαση', weight: 30 }
         ]
       };
     }
@@ -76,6 +77,8 @@ importRouter.post('/import/sample-fixture', (req, res) => {
     }
   }
 
+  scheduleSave();
+
   res.json({
     success: true,
     message: 'Sample session fixture imported successfully!',
@@ -87,12 +90,13 @@ importRouter.post('/import/sample-fixture', (req, res) => {
 
 
 // 1. Full Hierarchy Import (Course -> Period -> Group -> Student)
-importRouter.post('/import/hierarchy', (req, res) => {
-  const user = (req as any).user as User;
+const handleHierarchy = (req: any, res: any) => {
+  const user = req.user as User;
   let rows: CsvRow[] = [];
+  const rawCsv = req.body.csvText || req.body.csv_data || req.body.csv;
 
-  if (typeof req.body.csvText === 'string') {
-    const matrix = parseCsvText(req.body.csvText);
+  if (typeof rawCsv === 'string') {
+    const matrix = parseCsvText(rawCsv);
     rows = extractRows(matrix, 'hierarchy');
   } else if (Array.isArray(req.body.rows)) {
     rows = req.body.rows;
@@ -102,10 +106,7 @@ importRouter.post('/import/hierarchy', (req, res) => {
     return res.status(400).json({ error: 'Δεν βρέθηκαν έγκυρες εγγραφές στο CSV.' });
   }
 
-  let coursesCreated = 0;
-  let periodsCreated = 0;
-  let groupsCreated = 0;
-  let studentsCreated = 0;
+  let coursesCreated = 0, periodsCreated = 0, groupsCreated = 0, studentsCreated = 0;
 
   for (const r of rows) {
     const periodName = (r.period || 'Τρέχουσα Περίοδος').trim();
@@ -114,65 +115,44 @@ importRouter.post('/import/hierarchy', (req, res) => {
     const studentName = (r.full_name || '').trim();
     const presentationTitle = (r.presentation_title || '').trim() || null;
 
-    // Period
-    let period = db.periods.find(p => p.name.toLowerCase() === periodName.toLowerCase());
+    let period = db.periods.find(p => p.name.trim().toLowerCase() === periodName.toLowerCase() && (p.owner_id === user.id || user.role === 'ADMIN'));
     if (!period) {
-      period = {
-        id: db.nextPeriodId++,
-        name: periodName,
-        owner_id: user.id
-      };
+      period = { id: db.nextPeriodId++, name: periodName, owner_id: user.id };
       db.periods.push(period);
       periodsCreated++;
     }
 
-    // Course
-    let course = db.courses.find(c => c.period_id === period!.id && c.name.toLowerCase() === courseName.toLowerCase());
+    let course = db.courses.find(c => c.period_id === period!.id && c.name.trim().toLowerCase() === courseName.toLowerCase());
     if (!course) {
-      course = {
-        id: db.nextCourseId++,
-        name: courseName,
-        description: null,
-        owner_id: user.id,
-        period_id: period.id
-      };
+      course = { id: db.nextCourseId++, name: courseName, description: null, owner_id: user.id, period_id: period.id };
       db.courses.push(course);
       coursesCreated++;
     }
 
-    // Group
-    let group = db.groups.find(g => g.course_id === course!.id && g.period_id === period!.id && g.title.toLowerCase() === groupTitle.toLowerCase());
+    let group = db.groups.find(g => g.course_id === course!.id && g.period_id === period!.id && g.title.trim().toLowerCase() === groupTitle.toLowerCase());
     if (!group) {
-      group = {
-        id: db.nextGroupId++,
-        title: groupTitle,
-        course_id: course.id,
-        period_id: period.id,
-        owner_id: user.id,
-        presentation_date: null
-      };
+      group = { id: db.nextGroupId++, title: groupTitle, course_id: course.id, period_id: period.id, owner_id: user.id, presentation_date: null };
       db.groups.push(group);
       groupsCreated++;
     }
 
-    // Student
     if (studentName) {
-      const existingStudent = db.students.find(s => s.group_id === group!.id && s.full_name.toLowerCase() === studentName.toLowerCase());
+      const existingStudent = db.students.find(s => s.group_id === group!.id && s.full_name.trim().toLowerCase() === studentName.toLowerCase());
       if (!existingStudent) {
-        const student: Student = {
-          id: db.nextStudentId++,
-          group_id: group.id,
-          full_name: studentName,
-          presentation_title: presentationTitle
-        };
-        db.students.push(student);
+        db.students.push({ id: db.nextStudentId++, group_id: group.id, full_name: studentName, presentation_title: presentationTitle });
         studentsCreated++;
       }
     }
   }
 
+  scheduleSave();
+
   res.json({
     success: true,
+    imported_courses: coursesCreated,
+    imported_periods: periodsCreated,
+    imported_groups: groupsCreated,
+    imported_students: studentsCreated,
     summary: {
       courses_created: coursesCreated,
       periods_created: periodsCreated,
@@ -181,19 +161,26 @@ importRouter.post('/import/hierarchy', (req, res) => {
       total_rows: rows.length
     }
   });
-});
+};
+importRouter.post('/import/hierarchy', handleHierarchy);
+importRouter.post('/import/hierarchy-csv', handleHierarchy);
 
 // 2. Students into existing group
-importRouter.post('/import/students', (req, res) => {
-  const groupId = Number(req.body.groupId);
+const handleStudents = (req: any, res: any) => {
+  const user = req.user as User;
+  const groupId = Number(req.body.groupId || req.body.group_id);
   const group = db.groups.find(g => g.id === groupId);
   if (!group) {
     return res.status(404).json({ error: 'Η επιλεγμένη ομάδα δεν βρέθηκε.' });
   }
+  if (user.role !== 'ADMIN' && group.owner_id !== user.id) {
+    return res.status(403).json({ error: 'Δεν έχετε δικαίωμα' });
+  }
 
   let rows: CsvRow[] = [];
-  if (typeof req.body.csvText === 'string') {
-    const matrix = parseCsvText(req.body.csvText);
+  const rawCsv = req.body.csvText || req.body.csv_data || req.body.csv;
+  if (typeof rawCsv === 'string') {
+    const matrix = parseCsvText(rawCsv);
     rows = extractRows(matrix, 'students');
   } else if (Array.isArray(req.body.rows)) {
     rows = req.body.rows;
@@ -209,22 +196,26 @@ importRouter.post('/import/students', (req, res) => {
     if (!name) continue;
     const title = (r.presentation_title || '').trim() || null;
 
-    const existing = db.students.find(s => s.group_id === groupId && s.full_name.toLowerCase() === name.toLowerCase());
+    const existing = db.students.find(s => s.group_id === groupId && s.full_name.trim().toLowerCase() === name.toLowerCase());
     if (!existing) {
-      const student: Student = {
+      db.students.push({
         id: db.nextStudentId++,
         group_id: groupId,
         full_name: name,
         presentation_title: title
-      };
-      db.students.push(student);
+      });
       created++;
     }
   }
 
+  scheduleSave();
+
   res.json({
     success: true,
     count: created,
+    imported_students: created,
     total_rows: rows.length
   });
-});
+};
+importRouter.post('/import/students', handleStudents);
+importRouter.post('/import/students-csv', handleStudents);

@@ -7,9 +7,10 @@ import { SessionItem } from '../../types';
 
 interface Props {
   session: SessionItem;
+  enableDemo?: boolean;
 }
 
-export function ActiveSessionBanner({ session }: Props) {
+export function ActiveSessionBanner({ session, enableDemo = true }: Props) {
   const { t, language } = useT();
   const isActive = session.status === 'ACTIVE';
 
@@ -50,7 +51,7 @@ export function ActiveSessionBanner({ session }: Props) {
       </div>
 
       <div style={{ display: 'flex', gap: '.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        {session.public_id && (
+        {session.public_id && enableDemo !== false && (
           <button
             type="button"
             className="btn-student-phone-preview"

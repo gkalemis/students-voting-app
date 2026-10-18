@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
+import { PasswordInput } from './PasswordInput';
 
 export function UserForm({
   close, saved, failed
@@ -61,8 +62,7 @@ export function UserForm({
         </label>
         <label>
           {t('temporaryPassword')}
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={e => setPassword(e.target.value)}
             minLength={5}
@@ -117,7 +117,3 @@ export function LogoUpload({
     </div>
   );
 }
-
-
-
-

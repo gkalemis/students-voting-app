@@ -43,9 +43,7 @@ export function useDashboardState() {
   useEffect(() => {
     api('/public/branding')
       .then((data: any) => {
-        if (data && typeof data.enable_sample_fixture_button === 'boolean') {
-          setEnableSampleFixtureButton(data.enable_sample_fixture_button);
-        }
+        setEnableSampleFixtureButton(data?.enable_sample_fixture_button !== false && data?.enable_demo !== false);
       })
       .catch(() => {});
   }, []);

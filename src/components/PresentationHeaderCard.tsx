@@ -5,6 +5,7 @@ import { AcademicLogo } from './AcademicLogo';
 import { VotingCountdown } from './VotingCountdown';
 import { toGreekUppercase } from '../utils/greek';
 import { getBrandingText } from '../utils/branding';
+import { translateCriterionName } from '../i18n';
 
 interface PresentationHeaderCardProps {
   brand?: Brand;
@@ -105,7 +106,7 @@ export function PresentationHeaderCard({
             <div className="pres-categories-chips">
               {categories.map((c, i) => (
                 <span key={c.id || i} className="pres-category-chip">
-                  {c.name} <b className="chip-weight">{c.weight}%</b>
+                  {translateCriterionName(c.name, language)} <b className="chip-weight">{c.weight}%</b>
                 </span>
               ))}
             </div>

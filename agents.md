@@ -1,5 +1,7 @@
 # Agent Instructions & Project Constitution
 
+For AI Studio imports, follow `AISTUDIO_IMPORT.md`. Its production-specific rules take precedence over upstream demo credential behavior.
+
 ## 1. Mandatory Approval Policy
 - **Always ask for approval** from the user before executing or finalizing architectural changes, major refactorings, or modifications to core grading workflows.
 

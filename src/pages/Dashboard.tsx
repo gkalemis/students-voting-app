@@ -80,7 +80,7 @@ export function Dashboard() {
       <div className="title-row">
         <h1>{t('dashboard')}</h1>
         <div className="actions">
-          {activeOrUnarchived && (
+          {activeOrUnarchived && enableSampleFixtureButton && (
             <button
               type="button"
               className="btn-student-phone-preview"
@@ -101,7 +101,35 @@ export function Dashboard() {
       {err && <p className="error" role="alert">{err}</p>}
       {notice && <p className="notice" role="status">{notice}</p>}
 
-      {activeOrUnarchived && <ActiveSessionBanner session={activeOrUnarchived} />}
+      {/* Unified Command Center Quick Stats Bar */}
+      <div className="card" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1rem 1.25rem', margin: '0.75rem 0 1.25rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderRadius: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>{t('courses')}</span>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{courses.length}</div>
+          </div>
+          <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
+          <div>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>{t('periods')}</span>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{periods.length}</div>
+          </div>
+          <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
+          <div>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>{t('groups')}</span>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{groups.length}</div>
+          </div>
+          <div style={{ width: '1px', height: '24px', background: '#cbd5e1' }} />
+          <div>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', fontWeight: 700 }}>{t('waitingSessions')}</span>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>{waitingSessions.length}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>
+          🏛️ {language === 'el' ? 'Κέντρο Διοίκησης Μαθημάτων' : 'Academic Command Hub'}
+        </div>
+      </div>
+
+      {activeOrUnarchived && <ActiveSessionBanner session={activeOrUnarchived} enableDemo={enableSampleFixtureButton} />}
 
       <WorkflowBar
         onOpen={open}

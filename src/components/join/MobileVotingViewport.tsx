@@ -4,6 +4,7 @@ import { AcademicLogo } from '../AcademicLogo';
 import { LanguageButton } from '../LanguageButton';
 import { VotingCountdown } from '../VotingCountdown';
 import { toGreekUppercase } from '../../utils/greek';
+import { translateCriterionName, Language } from '../../i18n';
 
 interface MobileVotingViewportProps {
   s: State;
@@ -100,11 +101,11 @@ export function MobileVotingViewport({
           return (
             <div key={c.id} className="mobile-compact-criterion">
               <div className="mobile-criterion-header">
-                <h3 className="mobile-criterion-name">{c.name}</h3>
+                <h3 className="mobile-criterion-name">{translateCriterionName(c.name, language as Language)}</h3>
                 <span className="mobile-criterion-weight">{c.weight}%</span>
               </div>
 
-              <div className="mobile-rating-buttons" role="radiogroup" aria-label={c.name}>
+              <div className="mobile-rating-buttons" role="radiogroup" aria-label={translateCriterionName(c.name, language as Language)}>
                 {[1, 2, 3, 4, 5].map(n => {
                   const isSelected = currentVal === n;
                   return (
@@ -131,8 +132,8 @@ export function MobileVotingViewport({
       <footer className="mobile-compact-footer">
         <button
           type="button"
-          className={`mobile-submit-btn ${!allGraded || !pt ? 'disabled' : ''} ${isModified ? 'modified' : hasSubmitted ? 'submitted' : ''}`}
-          disabled={!pt || !allGraded}
+          className={`mobile-submit-btn ${!allGraded || !pt || (hasSubmitted && !isModified) ? 'disabled' : ''} ${isModified ? 'modified' : hasSubmitted ? 'submitted' : ''}`}
+          disabled={!pt || !allGraded || (hasSubmitted && !isModified)}
           onClick={onSubmit}
         >
           <span>{isModified ? '💾' : hasSubmitted ? '✓' : allGraded ? '🚀' : '✏️'}</span>

@@ -100,6 +100,21 @@ export function Admin() {
       {error && <p className="error" role="alert">{error}</p>}
       {message && <p className="notice" role="status">{message}</p>}
 
+      {/* Executive Command Hub Banner */}
+      <div className="card" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '1rem 1.25rem', margin: '0.75rem 0 1.25rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderRadius: 12 }}>
+        <div>
+          <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+            {language === 'el' ? 'Διαχείριση Συστήματος & Διδασκόντων' : 'System & Lecturer Administration'}
+          </strong>
+          <p style={{ margin: '0.2rem 0 0 0', color: '#64748b', fontSize: '0.88rem' }}>
+            {language === 'el' ? 'Έλεγχος λογαριασμών καθηγητών, παγκόσμιας ταυτότητας και δομής cascading διαγραφών.' : 'Manage lecturer accounts, global branding, and cascading structural removal.'}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <span className="pill active">{users.length} {language === 'el' ? 'Χρήστες' : 'Users'}</span>
+        </div>
+      </div>
+
       <section style={{ margin: '1.5rem 0' }}>
         <h2>{t('users')}</h2>
         <div className="list">

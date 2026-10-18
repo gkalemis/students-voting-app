@@ -53,9 +53,12 @@ brandingRouter.get('/branding', adminMiddleware, (req, res) => {
 
 brandingRouter.put('/branding', adminMiddleware, (req, res) => {
   try {
-    if (req.body.enable_sample_fixture_button !== undefined) {
-      if (typeof req.body.enable_sample_fixture_button !== 'boolean') throw new Error('INVALID_BRANDING');
-      db.globalBranding.enable_sample_fixture_button = req.body.enable_sample_fixture_button;
+    if (req.body.enable_sample_fixture_button !== undefined || req.body.enable_demo !== undefined) {
+      const { enable_sample_fixture_button: sample, enable_demo: demo } = req.body;
+      if ((sample !== undefined && typeof sample !== 'boolean') || (demo !== undefined && typeof demo !== 'boolean')) throw new Error('INVALID_BRANDING');
+      if (sample !== undefined && demo !== undefined && sample !== demo) throw new Error('INVALID_BRANDING');
+      db.globalBranding.enable_sample_fixture_button = sample ?? demo;
+      db.globalBranding.enable_demo = sample ?? demo;
     }
     for (const key of ['university_name', 'school_name', 'department_name'] as const) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) db.globalBranding[key] = brandingText(req.body[key]);

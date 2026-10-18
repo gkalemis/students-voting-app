@@ -62,7 +62,7 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
     theme_color: (db.users.find(u => u.id === s.owner_id) || (course ? db.users.find(u => u.id === course.owner_id) : null))?.theme_color || '#0d9488',
     presentations,
     server_time: new Date().toISOString(),
-    results: (s.results_revealed || s.status === 'COMPLETED' || s.status === 'ARCHIVED') ? (calculateResults(s.id) || s.archive_snapshot?.results) : null
+    results: (s.results_revealed || s.status === 'ARCHIVED') ? (calculateResults(s.id) || s.archive_snapshot?.results) : null
   });
 });
 

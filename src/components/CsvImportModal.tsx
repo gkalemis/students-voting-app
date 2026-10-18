@@ -53,7 +53,13 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
       setError(language === 'el' ? 'Παρακαλώ επιλέξτε ή επικολλήστε ένα αρχείο CSV.' : 'Please select or paste CSV data.');
       return;
     }
-    if (mode === 'students' && !activeSelectedGroup) {
+
+    let targetMode = mode;
+    if (preview.headers.some(h => /^(μάθημα|μαθημα|course|περίοδος|περιοδος)/i.test(h.trim()))) {
+      targetMode = 'hierarchy';
+    }
+
+    if (targetMode === 'students' && !activeSelectedGroup) {
       setError(t('groupFirst'));
       return;
     }
@@ -63,25 +69,32 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
     setResultMsg('');
 
     try {
-      if (mode === 'hierarchy') {
-        const res = await api('/import/hierarchy-csv', json('POST', { csv_data: csvText }));
+      if (targetMode === 'hierarchy') {
+        const res = await api('/import/hierarchy', json('POST', { csvText, csv_data: csvText }));
+        const cCount = res.imported_courses ?? res.summary?.courses_created ?? 0;
+        const pCount = res.imported_periods ?? res.summary?.periods_created ?? 0;
+        const gCount = res.imported_groups ?? res.summary?.groups_created ?? 0;
+        const sCount = res.imported_students ?? res.summary?.students_created ?? 0;
         setResultMsg(
           language === 'el'
-            ? `Επιτυχής εισαγωγή: ${res.imported_courses} μαθήματα, ${res.imported_periods} περίοδοι, ${res.imported_groups} ομάδες, ${res.imported_students} φοιτητές!`
-            : `Successfully imported: ${res.imported_courses} courses, ${res.imported_periods} periods, ${res.imported_groups} groups, ${res.imported_students} students!`
+            ? `Επιτυχής εισαγωγή: ${cCount} μαθήματα, ${pCount} περίοδοι, ${gCount} ομάδες, ${sCount} φοιτητές!`
+            : `Successfully imported: ${cCount} courses, ${pCount} periods, ${gCount} groups, ${sCount} students!`
         );
         setTimeout(() => {
           onSuccess();
         }, 1200);
       } else {
-        const res = await api('/import/students-csv', json('POST', {
+        const res = await api('/import/students', json('POST', {
+          groupId: Number(activeSelectedGroup),
           group_id: Number(activeSelectedGroup),
+          csvText,
           csv_data: csvText
         }));
+        const sCount = res.imported_students ?? res.count ?? 0;
         setResultMsg(
           language === 'el'
-            ? `Επιτυχής εισαγωγή: ${res.imported_students} φοιτητές προστέθηκαν στην ομάδα!`
-            : `Successfully imported: ${res.imported_students} students added to the group!`
+            ? `Επιτυχής εισαγωγή: ${sCount} φοιτητές προστέθηκαν στην ομάδα!`
+            : `Successfully imported: ${sCount} students added to the group!`
         );
         setTimeout(() => {
           onSuccess();

@@ -20,9 +20,9 @@ export function Join() {
   const { t, language } = useT();
   const [s, load] = usePublic(publicId);
   const [scores, setScores] = useState<Record<number, number>>({});
+  const [savedScores, setSavedScores] = useState<Record<number, number>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; title: string; subtitle?: string } | null>(null);
   const [pt, setPt] = useState('');
-  const [isModified, setIsModified] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
@@ -55,12 +55,13 @@ export function Join() {
       api(`/public/sessions/${publicId}/my-vote`, { headers: { 'X-Participation-Token': pt } })
         .then(x => {
           if (x.scores && Object.keys(x.scores).length > 0) {
-            setScores(Object.fromEntries(Object.entries(x.scores as Record<string, number>).map(([k, v]) => [Number(k), v])) as Record<number, number>);
-            setIsModified(false);
+            const fetched = Object.fromEntries(Object.entries(x.scores as Record<string, number>).map(([k, v]) => [Number(k), v])) as Record<number, number>;
+            setScores(fetched);
+            setSavedScores(fetched);
             setHasSubmitted(true);
           } else {
             setScores({});
-            setIsModified(false);
+            setSavedScores({});
             setHasSubmitted(false);
           }
         })
@@ -83,7 +84,6 @@ export function Join() {
   const handleScoreChange = (criterionId: number, val: number) => {
     triggerHaptic(15);
     setScores(prev => ({ ...prev, [criterionId]: val }));
-    setIsModified(true);
   };
 
   async function submit() {
@@ -99,7 +99,7 @@ export function Join() {
         title: language === 'el' ? 'Η ψήφος καταχωρίστηκε!' : 'Vote submitted!',
         subtitle: language === 'el' ? 'Μπορείτε να αλλάξετε όσο η ψηφοφορία είναι ανοικτή' : 'Editable while voting remains open'
       });
-      setIsModified(false);
+      setSavedScores({ ...scores });
       setHasSubmitted(true);
       setTimeout(() => setToast(null), 3000);
       load();
@@ -111,6 +111,11 @@ export function Join() {
       setTimeout(() => setToast(null), 3000);
     }
   }
+
+  const isModified = Boolean(
+    hasSubmitted &&
+    s?.criteria?.some(c => (scores[c.id] ?? 0) !== (savedScores[c.id] ?? 0))
+  );
 
   const gradedCount = Object.keys(scores).length;
   const allGraded = gradedCount === s.criteria.length;
@@ -127,7 +132,7 @@ export function Join() {
 
   return (
     <BrandedLayout state={s}>
-      <main className="mobile-voting-main">
+      <main className={`mobile-voting-main ${s.active_presentation ? 'active-voting' : 'idle-mode'}`}>
         {s.active_presentation ? (
           <MobileVotingViewport
             s={s}

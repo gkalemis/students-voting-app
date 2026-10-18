@@ -22,7 +22,8 @@ export const db = {
     logo_url: null,
     background_image_url: null,
     background_opacity: 0.12,
-    enable_sample_fixture_button: true
+    enable_sample_fixture_button: true,
+    enable_demo: true
   } as Branding,
   periods: [] as AcademicPeriod[],
   courses: [] as Course[],
@@ -83,9 +84,9 @@ export function getVoteCount(presentationId: number, anonymous = false): number 
 
 export function getDefaultCriteria(sessionId = 0): Criterion[] {
   return [
-    { id: db.nextCriterionId++, session_id: sessionId, name: 'Επιστημονική τεκμηρίωση', weight: 40, position: 0 },
-    { id: db.nextCriterionId++, session_id: sessionId, name: 'Σαφήνεια και οργάνωση', weight: 30, position: 1 },
-    { id: db.nextCriterionId++, session_id: sessionId, name: 'Κριτική σκέψη & Απαντήσεις', weight: 30, position: 2 }
+    { id: db.nextCriterionId++, session_id: sessionId, name: 'Τεκμηρίωση', weight: 40, position: 0 },
+    { id: db.nextCriterionId++, session_id: sessionId, name: 'Λογική Δομή', weight: 30, position: 1 },
+    { id: db.nextCriterionId++, session_id: sessionId, name: 'Παρουσίαση', weight: 30, position: 2 }
   ];
 }
 

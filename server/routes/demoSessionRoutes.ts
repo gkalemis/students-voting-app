@@ -12,6 +12,9 @@ export const demoSessionRouter = Router();
 demoSessionRouter.post('/admin/demo-session', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
   if (user.role !== 'ADMIN') return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
+  if (db.globalBranding.enable_demo === false || db.globalBranding.enable_sample_fixture_button === false) {
+    return res.status(403).json({ detail: 'Η λειτουργία φόρτωσης δοκιμαστικού πακέτου έχει απενεργοποιηθεί από τον διαχειριστή.' });
+  }
 
   // 1. Check if an active session already exists
   let active = db.sessions.find(s => s.status === 'ACTIVE' && s.is_demo && s.owner_id === user.id);

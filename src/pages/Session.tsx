@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useT } from '../context/LocaleContext';
 import { api, json, connect } from '../api';
@@ -24,7 +24,7 @@ export function Session() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showArchivePrompt, setShowArchivePrompt] = useState(false);
-  const [promptDismissed, setPromptDismissed] = useState(false);
+  const promptDismissedRef = useRef(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -33,7 +33,7 @@ export function Session() {
     api(`/sessions/${id}`)
       .then(data => {
         setS(data);
-        if (data.status === 'COMPLETED' && !data.archive_snapshot && !promptDismissed) {
+        if (data.status === 'COMPLETED' && !data.results_revealed && !data.archive_snapshot && !promptDismissedRef.current) {
           setShowArchivePrompt(true);
         }
       })
@@ -49,7 +49,7 @@ export function Session() {
     navigate
   });
 
-  useEffect(() => { load(); }, [id, language]);
+  useEffect(() => { promptDismissedRef.current = false; load(); }, [id, language]);
 
   useEffect(() => {
     if (!s?.public_id) return;
@@ -82,7 +82,7 @@ export function Session() {
         onOpenEditor={() => setShowEditorModal(true)}
         onShowComplete={() => setShowCompleteModal(true)}
         onShowQr={() => setShowQrModal(true)}
-        onShowArchive={() => setShowArchivePrompt(true)}
+        onShowArchive={() => actions.handleArchive(() => {})}
         onShowDelete={() => setShowDeleteModal(true)}
         archiving={actions.archiving}
       />
@@ -184,11 +184,13 @@ export function Session() {
 
       <ArchivePromptModal
         show={showArchivePrompt}
-        archiving={actions.archiving}
-        onArchive={() => actions.handleArchive(() => setShowArchivePrompt(false))}
-        onDismiss={() => {
-          setShowArchivePrompt(false);
-          setPromptDismissed(true);
+        onReveal={async () => {
+          promptDismissedRef.current = true;
+          if (await actions.act('reveal')) {
+            setShowArchivePrompt(false);
+          } else {
+            promptDismissedRef.current = false;
+          }
         }}
       />
 

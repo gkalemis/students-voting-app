@@ -42,36 +42,47 @@ export function ResourceFormCriteria({
   };
 
   return (
-    <div style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <b style={{ fontSize: '0.92rem', color: '#1e293b' }}>
+    <div style={{ marginTop: '0.45rem', marginBottom: '0.45rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+        <b style={{ fontSize: '0.88rem', color: '#1e293b' }}>
           🏷️ {t('gradeCategories')}
         </b>
-        <span
-          style={{
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            padding: '0.2rem 0.55rem',
-            borderRadius: '6px',
-            background: isValid ? '#ecfdf5' : '#fffbeb',
-            color: isValid ? '#047857' : '#b45309',
-            border: `1px solid ${isValid ? '#a7f3d0' : '#fde68a'}`
-          }}
-        >
-          {t('totalWeight')}: {totalWeight}% {isValid ? '✓' : '(≠ 100%)'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span
+            style={{
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              padding: '0.15rem 0.45rem',
+              borderRadius: '6px',
+              background: isValid ? '#ecfdf5' : '#fffbeb',
+              color: isValid ? '#047857' : '#b45309',
+              border: `1px solid ${isValid ? '#a7f3d0' : '#fde68a'}`
+            }}
+          >
+            {t('totalWeight')}: {totalWeight}% {isValid ? '✓' : '(≠ 100%)'}
+          </span>
+          <button
+            type="button"
+            className="secondary"
+            onClick={addCriterion}
+            style={{ fontSize: '0.78rem', minHeight: '26px', height: '26px', padding: '0.15rem 0.5rem' }}
+            title={t('addCategory')}
+          >
+            + {t('addCategory')}
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         {sessionCriteria.map((c, idx) => (
           <div
             key={idx}
             style={{
               display: 'flex',
-              gap: '0.5rem',
+              gap: '0.4rem',
               alignItems: 'center',
               background: '#f8fafc',
-              padding: '0.5rem 0.65rem',
+              padding: '0.25rem 0.45rem',
               borderRadius: '8px',
               border: '1px solid #e2e8f0'
             }}
@@ -82,9 +93,9 @@ export function ResourceFormCriteria({
               value={c.name}
               onChange={e => updateCriterion(idx, 'name', e.target.value)}
               required
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.88rem' }}
             />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', width: '90px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', width: '80px' }}>
               <input
                 type="number"
                 min="1"
@@ -92,14 +103,14 @@ export function ResourceFormCriteria({
                 value={c.weight}
                 onChange={e => updateCriterion(idx, 'weight', e.target.value)}
                 required
-                style={{ textAlign: 'center', padding: '0.6rem 0.3rem' }}
+                style={{ textAlign: 'center', padding: '0.35rem 0.25rem', fontSize: '0.88rem' }}
               />
-              <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>%</span>
+              <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>%</span>
             </div>
             <button
               type="button"
               className="danger"
-              style={{ minHeight: '34px', padding: '0.3rem 0.6rem', fontSize: '0.85rem' }}
+              style={{ minHeight: '28px', height: '28px', padding: '0.1rem 0.45rem', fontSize: '0.8rem' }}
               disabled={sessionCriteria.length <= 1}
               onClick={() => removeCriterion(idx)}
               title={t('removeCategory')}
@@ -108,17 +119,6 @@ export function ResourceFormCriteria({
             </button>
           </div>
         ))}
-      </div>
-
-      <div style={{ marginTop: '0.6rem' }}>
-        <button
-          type="button"
-          className="secondary"
-          onClick={addCriterion}
-          style={{ width: '100%', fontSize: '0.85rem', minHeight: '34px' }}
-        >
-          + {t('addCategory')}
-        </button>
       </div>
     </div>
   );

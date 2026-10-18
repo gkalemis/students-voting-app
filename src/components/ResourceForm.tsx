@@ -3,6 +3,8 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { FormKind } from '../types';
 import { ResourceFormCriteria } from './ResourceFormCriteria';
+import { SessionResourceFields } from './forms/SessionResourceFields';
+import { localToday } from '../utils/dates';
 
 interface ResourceFormProps {
   kind: Exclude<FormKind, null>;
@@ -21,16 +23,16 @@ export function ResourceForm({
   const [courseId, setCourse] = useState(String(courses[0]?.id || ''));
   const [periodId, setPeriod] = useState(String(periods[0]?.id || ''));
   const [groupId, setGroup] = useState(String(groups[0]?.id || ''));
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const initialGroup = kind === 'session' ? (groups.find(x => String(x.id) === String(groups[0]?.id)) || groups[0]) : null;
+  const [date, setDate] = useState(initialGroup?.presentation_date || localToday());
   const [busy, setBusy] = useState(false);
   const [description, setDescription] = useState('');
-  const initialGroup = kind === 'session' ? (groups.find(x => String(x.id) === String(groups[0]?.id)) || groups[0]) : null;
   const [name, setName] = useState(kind === 'session' ? (initialGroup?.title || '') : '');
   const [isNameManuallyEdited, setIsNameManuallyEdited] = useState(false);
   const [sessionCriteria, setSessionCriteria] = useState<{ name: string; weight: number }[]>([
-    { name: t('criterionScience'), weight: 40 },
-    { name: t('criterionClarity'), weight: 30 },
-    { name: t('criterionThinking'), weight: 30 }
+    { name: t('criterionDocumentation'), weight: 40 },
+    { name: t('criterionLogicalStructure'), weight: 30 },
+    { name: t('criterionPresentation'), weight: 30 }
   ]);
 
   const headings = {
@@ -57,13 +59,20 @@ export function ResourceForm({
   }, [courseId, periodId]);
 
   useEffect(() => {
-    if (kind === 'session' && !isNameManuallyEdited) {
+    if (kind === 'session') {
       const current = groups.find(x => String(x.id) === groupId) || filtered[0];
-      if (current?.title) {
+      if (!isNameManuallyEdited && current?.title) {
         setName(current.title);
       }
     }
   }, [kind, groupId, isNameManuallyEdited]);
+
+  useEffect(() => {
+    if (kind === 'session') {
+      const group = groups.find(x => String(x.id) === groupId);
+      setDate(group?.presentation_date || localToday());
+    }
+  }, [kind, groupId]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,7 +94,7 @@ export function ResourceForm({
           course_id: Number(courseId),
           period_id: Number(periodId),
           group_id: Number(groupId),
-          session_date: selected?.presentation_date || date,
+          session_date: date,
           title: sessionTitle,
           criteria: sessionCriteria
         }));
@@ -102,97 +111,92 @@ export function ResourceForm({
 
   return (
     <div className="modal" role="dialog" aria-modal="true">
-      <form className="card" onSubmit={submit}>
-        <h2>{t(headings[kind])}</h2>
-        {kind !== 'session' && (
-          <label>
-            {kind === 'course' ? t('courseName') : kind === 'period' ? t('periodName') : t('groupTitle')}
-            <input value={name} onChange={e => setName(e.target.value)} maxLength={200} required autoFocus />
-          </label>
+      <form
+        className="card"
+        onSubmit={submit}
+        style={{
+          maxWidth: kind === 'session' ? 660 : 520,
+          padding: kind === 'session' ? '1.2rem 1.4rem' : '1.5rem',
+          margin: '0 auto',
+          maxHeight: '92vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <h2 style={{ margin: '0 0 0.55rem 0', fontSize: '1.25rem' }}>{t(headings[kind])}</h2>
+
+        {kind === 'session' ? (
+          <SessionResourceFields
+            name={name}
+            setName={setName}
+            setIsNameManuallyEdited={setIsNameManuallyEdited}
+            date={date}
+            setDate={setDate}
+            courseId={courseId}
+            setCourse={setCourse}
+            periodId={periodId}
+            setPeriod={setPeriod}
+            groupId={groupId}
+            setGroup={setGroup}
+            courses={courses}
+            periods={periods}
+            groups={groups}
+            filtered={filtered}
+          />
+        ) : (
+          <>
+            <label>
+              {kind === 'course' ? t('courseName') : kind === 'period' ? t('periodName') : t('groupTitle')}
+              <input value={name} onChange={e => setName(e.target.value)} maxLength={200} required autoFocus />
+            </label>
+
+            {kind === 'course' && (
+              <label>
+                {t('description')}
+                <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={3000} />
+              </label>
+            )}
+
+            {kind === 'group' && (
+              <>
+                <label>
+                  {t('course')}
+                  <select
+                    value={courseId}
+                    onChange={e => {
+                      const newCid = e.target.value;
+                      setCourse(newCid);
+                      const c = courses.find(x => String(x.id) === newCid);
+                      if (c && c.period_id) setPeriod(String(c.period_id));
+                    }}
+                    required
+                  >
+                    {courses.map(x => (
+                      <option value={x.id} key={x.id}>{x.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('period')}
+                  <select value={periodId} onChange={e => setPeriod(e.target.value)} required>
+                    {periods.map(x => (
+                      <option value={x.id} key={x.id}>{x.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t('presentationDate')}
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                </label>
+              </>
+            )}
+          </>
         )}
-        {kind === 'session' && (
-          <label>
-            {t('sessionTitle')}
-            <input
-              value={name}
-              onChange={e => {
-                setName(e.target.value);
-                setIsNameManuallyEdited(true);
-              }}
-              placeholder={groups.find(x => String(x.id) === groupId)?.title || t('sessionTitle')}
-              maxLength={200}
-              autoFocus
-            />
-          </label>
-        )}
-        {kind === 'course' && (
-          <label>
-            {t('description')}
-            <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={3000} />
-          </label>
-        )}
-        {(kind === 'group' || kind === 'session') && (
-          <label>
-            {t('course')}
-            <select
-              value={courseId}
-              onChange={e => {
-                const newCid = e.target.value;
-                setCourse(newCid);
-                const c = courses.find(x => String(x.id) === newCid);
-                if (c && c.period_id) {
-                  setPeriod(String(c.period_id));
-                }
-              }}
-              required
-            >
-              {courses.map(x => (
-                <option value={x.id} key={x.id}>{x.name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {(kind === 'group' || kind === 'session') && (
-          <label>
-            {t('period')}
-            <select value={periodId} onChange={e => setPeriod(e.target.value)} required>
-              {periods.map(x => (
-                <option value={x.id} key={x.id}>{x.name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {kind === 'group' && (
-          <label>
-            {t('presentationDate')}
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} required />
-          </label>
-        )}
-        {kind === 'session' && (
-          <label>
-            {t('group')}
-            <select
-              value={groupId}
-              onChange={e => {
-                const nextGid = e.target.value;
-                setGroup(nextGid);
-                if (!isNameManuallyEdited) {
-                  const grp = groups.find(x => String(x.id) === nextGid);
-                  if (grp?.title) setName(grp.title);
-                }
-              }}
-              required
-            >
-              {filtered.map(x => (
-                <option value={x.id} key={x.id}>{x.title} · {x.presentation_date}</option>
-              ))}
-            </select>
-          </label>
-        )}
+
         {kind === 'session' && (
           <ResourceFormCriteria sessionCriteria={sessionCriteria} setSessionCriteria={setSessionCriteria} />
         )}
-        <div className="actions">
+        <div className="actions" style={{ marginTop: '0.5rem' }}>
           <button disabled={busy}>{t('create')}</button>
           <button type="button" className="secondary" onClick={close}>{t('cancel')}</button>
         </div>

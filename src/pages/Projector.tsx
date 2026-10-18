@@ -8,6 +8,7 @@ import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
 import { PresentationHeaderCard } from '../components/PresentationHeaderCard';
 import { ResultsPodium } from '../components/ResultsPodium';
+import { AppFooter } from '../components/AppFooter';
 import { applyThemeColor } from '../theme';
 
 export function Projector() {
@@ -88,6 +89,7 @@ export function Projector() {
             </p>
           </aside>
         </div>
+        <AppFooter className="app-footer-projector" />
       </main>
     </BrandedLayout>
   );

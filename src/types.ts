@@ -7,6 +7,8 @@ export interface Brand {
   background_value?: string;
   background_image_url?: string;
   background_opacity: number;
+  enable_sample_fixture_button?: boolean;
+  enable_demo?: boolean;
 }
 
 export interface Result {

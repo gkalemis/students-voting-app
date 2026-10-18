@@ -64,7 +64,7 @@ export function extractRows(matrix: string[][], mode: 'hierarchy' | 'students'):
 
   const firstRow = matrix[0];
   const hasHeaders = firstRow.some(col =>
-    /μάθημα|μαθημα|περίοδος|ομάδα|φοιτητής|ονομα|course|period|group|student|name|title/i.test(col)
+    /μάθημα|μαθημα|περίοδος|ομάδα|φοιτητής|ονομα|course|period|group|student|name|title/i.test(col.trim())
   );
 
   let headerMap: Record<number, string> = {};

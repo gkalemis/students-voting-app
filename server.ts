@@ -84,7 +84,7 @@ import { adminMiddleware } from './server/middleware';
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.4.0' });
+  res.json({ status: 'ok', version: '2.8.1' });
 });
 
 // Completely clean / reset database

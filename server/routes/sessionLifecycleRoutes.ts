@@ -83,7 +83,7 @@ sessionLifecycleRouter.post('/sessions/:sid/complete', authMiddleware, (req, res
   finalizeVotes(sid);
   s.status = 'COMPLETED';
   s.completed_at = new Date().toISOString();
-  s.results_revealed = true; // Auto-reveal results when completed
+  s.results_revealed = false; // Reveal explicitly through the completed-session prompt.
 
   broadcastSession(s.public_id, 'state_changed');
   res.json({ ok: true });

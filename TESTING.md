@@ -6,6 +6,7 @@
 npm ci
 npm run lint
 npm run build
+npm run test:smoke
 docker compose config --quiet
 ```
 
@@ -14,6 +15,8 @@ GitHub Actions runs these checks for pushes and pull requests. Dependabot monito
 The 2026-10-15 major upgrade passed host and Docker builds with Express 5.3, bcryptjs 3.0, Multer 2.4, Vite 8.3, React plugin 6.1 and TypeScript 7.0. Isolated disposable-container checks covered production startup, root and SPA deep links, login/password replacement, accepted/rejected uploads, sample import, resource ownership, and demo authorization/timers. Browser acceptance remains a separate deployment check.
 
 ## Container smoke test
+
+`npm run test:smoke` creates a disposable data directory under the system temporary folder and never mounts production data. It verifies login credential hints stay absent, the administrator demo toggle is validated/persisted, disabled demo insertion is rejected, CSV aliases enforce group ownership, results require explicit reveal, archiving works, and real participation remains available with demos disabled. Integration exceptions for future imports are recorded in `AISTUDIO_IMPORT.md`.
 
 Use synthetic data and a non-production environment. After a successful build, confirm the health endpoint, startup logs, non-root user, lack of a published host port, Traefik network attachment, and persistence across restart.
 

@@ -53,12 +53,14 @@ export function useSessionActions({
     try {
       await api(`/sessions/${id}/${path}`, json('POST', body));
       load();
+      return true;
     } catch (e: any) {
       if (e?.error === 'SESSION_CONCURRENCY_LOCK' || e?.status === 409) {
         setConcurrencyLock(e);
       } else {
         setErr(translateError(e, language));
       }
+      return false;
     }
   };
 
@@ -85,6 +87,7 @@ export function useSessionActions({
       onClosePrompt();
       setToastMsg(language === 'el' ? 'Η συνεδρία αρχειοθετήθηκε και η ομάδα αποσύρθηκε!' : 'Session archived and group retired!');
       load();
+      navigate('/');
     } catch (e: any) {
       setErr(translateError(e, language));
     } finally {

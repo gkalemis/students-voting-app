@@ -6,6 +6,7 @@ import { broadcastSession } from '../ws';
 import { User, PresentationSession } from '../types';
 import { deleteSessionEverywhere, sessionLifecycleRouter } from './sessionLifecycleRoutes';
 import { config } from '../config';
+import { validSessionDate } from '../dates';
 import { demoSessionRouter } from './demoSessionRoutes';
 
 export function cleanupGhostPresentations(_sessionId: number) {}
@@ -43,6 +44,7 @@ sessionRouter.get('/sessions', authMiddleware, (req, res) => {
 sessionRouter.post('/sessions', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
   const { course_id, period_id, group_id, session_date, title, criteria } = req.body;
+  if (!validSessionDate(session_date)) return res.status(422).json({ detail: 'Μη έγκυρη ημερομηνία συνεδρίας' });
   const publicId = crypto.randomBytes(8).toString('base64url');
   const targetGroup = db.groups.find(g => g.id === Number(group_id));
   const targetCourse = db.courses.find(c => c.id === Number(course_id));
@@ -63,7 +65,7 @@ sessionRouter.post('/sessions', authMiddleware, (req, res) => {
     group_id: Number(group_id),
     group_title: groupTitle,
     owner_id: user.id,
-    session_date: session_date || new Date().toISOString().slice(0, 10),
+    session_date,
     title: title || groupTitle,
     status: 'WAITING',
     lock_new_participants: false,
@@ -120,6 +122,9 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
   }
 
   const { title, session_date, presentations } = req.body;
+  if (session_date !== undefined && !validSessionDate(session_date)) {
+    return res.status(422).json({ detail: 'Μη έγκυρη ημερομηνία συνεδρίας' });
+  }
   if (title !== undefined) session.title = title ? String(title).trim() : null;
   if (session_date !== undefined) session.session_date = String(session_date);
 

@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
-
 import { THEME_COLORS, applyThemeColor } from '../theme';
 import { safeStorage } from '../utils/storage';
 export { THEME_COLORS, applyThemeColor };
@@ -29,22 +28,24 @@ export function ThemePicker() {
   }
 
   return (
-    <details className="theme-picker">
-      <summary>{t('theme')}</summary>
-      <small>{t('themeHint')}</small>
-      <div className="swatches">
+    <div className="menu-theme-container">
+      <div className="menu-theme-title">
+        <span className="gear-dropdown-icon">🎨</span>
+        <span>{t('theme')}</span>
+      </div>
+      <div className="menu-swatches">
         {THEME_COLORS.map(color => (
           <button
             type="button"
             aria-label={color}
             title={color}
             key={color}
-            className={`swatch ${user.theme_color === color ? 'selected' : ''}`}
+            className={`menu-swatch ${user.theme_color === color ? 'selected' : ''}`}
             style={{ background: color }}
             onClick={() => choose(color)}
           />
         ))}
       </div>
-    </details>
+    </div>
   );
 }

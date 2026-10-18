@@ -75,7 +75,7 @@ export function SessionHeader({
             </button>
           )}
 
-          {s.public_id && (
+          {s.public_id && s.branding?.enable_sample_fixture_button !== false && s.branding?.enable_demo !== false && (
             <button
               type="button"
               className="btn-student-phone-preview"

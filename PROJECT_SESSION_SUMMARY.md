@@ -1,8 +1,46 @@
 # Project session summary
 
-Last updated: 2026-10-15
+Last updated: 2026-10-18
 
-Current release candidate: 2.4.0
+Current deployed release: 2.8.1
+
+## v2.8.1 publication preparation — 2026-10-18
+
+- User authorized committing and pushing both deployed imports and their production integration fixes as one release commit. Production GitHub `main` was verified at the local base `7111123` before publication.
+- Publication includes v2.8.0 UI/CSV/reveal improvements, v2.8.1 session dates/default criteria, standing AI Studio import rules, demo controls, regression tests, version/lockfile and handoff updates. Previously recorded successful builds, API/browser tests and deployment checks apply. Final whitespace, ShellCheck and Compose validation passed.
+- Runtime secrets, live data and backups remain excluded. No additional deployment is required for this source publication. Commit/push result is reported after execution; this entry supersedes earlier statements that publication awaits authorization.
+
+## Verified v2.8.1 rollout — 2026-10-18
+
+- User authorized deployment. `students-voting` is healthy on tested image `sha256:5489090be85c883382ea2b1f529cec235e2071509396c9b3db4eb46ba4dc88ee`. Public HTTPS health reports `2.8.1`; homepage security headers, image identity and unpublished port 3000 passed verification.
+- Consistent stopped-app backup: `backups/pre-deploy-2.8.1-20261018-114602/data.tar.gz`, verified to contain `db.json`; SHA-256 `8afcdf8a2d302b900c2581b00692655d5ec97a3304a8c23dea75f477aaaebaad`. Prior v2.8.0 image retained as `students-voting-backup:pre-2.8.1-20261018-114602`.
+- Used the reviewed `/tmp/deploy-students-2.8.sh` with updated candidate/version assertions for this authorized uncommitted-source rollout. ShellCheck and Bash syntax checks passed. Rollback was armed and not needed. No Git commit or push was performed. This supersedes the earlier v2.8.1 not-deployed status; publication remains pending authorization.
+
+## AI Studio v2.8.1 integration — 2026-10-18
+
+- Imported AI Studio `4bdb095` relative to `65801a6` using a three-way comparison against current uncommitted v2.8.0 integration. Preserved standing demo/login/security/deployment rules and all prior local changes. Source backup including uncommitted files: `backups/pre-aistudio-2.8.1-20261018-113547/source.tar.gz`, archive verified.
+- Restored explicit required session date field, group-date default and lecturer-selected date submission; fixed upstream UTC default and date reset during title editing. Added server calendar validation for creation and editing; invalid dates are rejected before mutation. New default criteria are Documentation 40%, Logical Structure 30%, Presentation 30%, with bilingual labels and compact form layout.
+- Deliberately excluded upstream startup migration that rewrites historic criterion names/weights. Existing stored grading is preserved, and legacy translations retain original meaning. Recorded this recurring exception in `AISTUDIO_IMPORT.md`; future baseline is `4bdb095`.
+- Manifest, lockfile, footer and health endpoint now report 2.8.1. PASS: lint, host build, isolated smoke suite, Compose configuration, Docker build and whitespace checks. npm installs report zero vulnerabilities. Added API regression cases for invalid/missing dates, selected-date persistence, title edits, local-day defaults, new criteria and historical-criteria preservation.
+- Browser PASS: 24 date form combinations over Greek/English, widths 320/375/430/768/820/1024, dated/undated groups; checked group/local calendar defaults, manual date survival, required input, submitted payload and 40/30/30 weights. Synthetic APIs and temporary data only; temporary script `/tmp/voting-2.8.1-browser.mjs`. Disposable server stopped.
+- Built image `sha256:5489090be85c883382ea2b1f529cec235e2071509396c9b3db4eb46ba4dc88ee`. No deployment, commit or push performed. Production remains healthy on v2.8.0 image `sha256:42a6595d7a12d60aefe69139b14590d2ef1f032b8483dc315898d012497a2748`. Local Git base remains `7111123`; both imports remain uncommitted. Next: authorized rollout/publication.
+
+## Verified v2.8.0 rollout — 2026-10-17
+
+- User approved deployment. Recreated `students-voting` from tested image `sha256:42a6595d7a12d60aefe69139b14590d2ef1f032b8483dc315898d012497a2748`; container became healthy and public HTTPS health confirmed version `2.8.0`. Homepage security headers, image identity and unpublished port 3000 passed verification.
+- Verified consistent stopped-app backup: `backups/pre-deploy-2.8.0-20261017-195129/data.tar.gz`, SHA-256 `3c9e9a6ff2462ed648dab0e5b8ea5314c0e5859a3af9f251f4a06d66c7397ba1`. Previous production image preserved under `students-voting-backup:pre-2.8-20261017-195129`.
+- Authorized rollout used `/tmp/deploy-students-2.8.sh` because routine `deploy.sh` requires committed source. ShellCheck/syntax checks passed; rollback was armed and not needed. No Git commit/push was performed. This supersedes the earlier not-deployed status for this integration. Next: publish the reviewed local source when authorized.
+
+## AI Studio v2.8.0 integration — 2026-10-17
+
+- Imported application changes from AI Studio commit `65801a6`, relative to last imported `5bfd1fe`: redesigned login/dashboard/navigation, password visibility, footer/version display, CSV compatibility fixes, mobile waiting/voting changes, unchanged-vote submission lock, results prompt and archive navigation. Updated manifest, lockfile, footer and health response to 2.8.0 while keeping reviewed dependencies and the Express 5 route fix.
+- Owner established recurring exceptions: never show test credentials/autofill on the opening screen; keep the administrator demo toggle for data insertion and student voting previews; preserve security/deployment fixes on every subsequent import. Recorded these in `AISTUDIO_IMPORT.md` and linked from `agents.md` because upstream is expected to continue conflicting until changed by the owner.
+- Validated and synchronized both demo flags, enforced disabled insertion for administrators and lecturers on sample/demo APIs, preserved real student participation, and added CSV group-ownership checks. Explicit public results reveal is now server-enforced, and failed reveal requests can be retried. Password visibility controls support both languages and keyboard access.
+- Source backup: `backups/pre-aistudio-2.8-20261017-194410/source.tar.gz`, verified before modifications. No live data was modified during integration/tests.
+- PASS: lint, host build, npm audit (zero vulnerabilities), Compose validation, Docker build, whitespace checks. Built candidate image `sha256:42a6595d7a12d60aefe69139b14590d2ef1f032b8483dc315898d012497a2748`.
+- Added `tests/import-smoke.mjs` and `npm run test:smoke`, also run in CI. It uses temporary data and verifies credential exclusion, demo settings validation/ownership/persistence, enabled/disabled insertions, CSV aliases and cross-user rejection, explicit reveal, archive and real voting admission with demos disabled. PASS.
+- Browser checks passed 24 combinations (320/375/430/768/820/1024 widths, Greek/English, demos on/off), password visibility, no horizontal login overflow, no page errors, admin setting state and dashboard demo preview visibility. Used mocked synthetic APIs and installed cached Chromium because the Playwright MCP's configured Chrome executable was missing. Temporary browser script: `/tmp/voting-2.8-browser.mjs`; disposable server stopped after tests.
+- Production remains healthy on image `sha256:bc2a7f1b6ff861586ed6edc6619f627b61b136ca86dfaa44155ca560ae6da5c2` (2.4.0); no deployment, commit or push performed. Local base is `7111123`; source/tests/docs are uncommitted. Next: deploy and publish only when authorized.
 
 ## Publication preparation — 2026-10-15
 

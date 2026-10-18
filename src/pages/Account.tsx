@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
+import { PasswordInput } from '../components/PasswordInput';
 import { safeStorage } from '../utils/storage';
+import { applyThemeColor } from '../theme';
 
 export function Account() {
   const { user, setUser } = useAuth();
@@ -16,6 +18,10 @@ export function Account() {
   const [confirmation, setConfirmation] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    applyThemeColor('#0d9488');
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,15 +42,34 @@ export function Account() {
 
   return (
     <Layout>
-      <section className="card login" style={{ margin: 'auto' }}>
-        <h1>{user?.must_change_password ? t('mandatoryPassword') : t('changePassword')}</h1>
-        {user?.must_change_password && <p>{t('temporaryReplace')}</p>}
+      <section className="card login" style={{ margin: 'auto', borderTop: '4px solid #0d9488' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          padding: '0.85rem 1.1rem',
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #0d9488 0%, color-mix(in srgb, #0d9488 60%, #ffffff) 100%)',
+          color: '#ffffff',
+          marginBottom: '1.25rem'
+        }}>
+          <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>🔐</span>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.15rem', color: '#ffffff', fontWeight: 800 }}>
+              {user?.must_change_password ? t('mandatoryPassword') : t('changePassword')}
+            </h2>
+            {user?.must_change_password && (
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.82rem', color: '#f0fdfa' }}>
+                {t('temporaryReplace')}
+              </p>
+            )}
+          </div>
+        </div>
 
         <form onSubmit={submit}>
           <label>
             {t('currentPassword')}
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={current}
               onChange={e => setCurrent(e.target.value)}
@@ -53,8 +78,7 @@ export function Account() {
           </label>
           <label>
             {t('newPassword')}
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               minLength={10}
               value={next}
@@ -64,8 +88,7 @@ export function Account() {
           </label>
           <label>
             {t('confirmPassword')}
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               minLength={10}
               value={confirmation}
