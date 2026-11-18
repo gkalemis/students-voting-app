@@ -2,6 +2,8 @@
 
 Self-hosted bilingual Greek–English classroom presentation voting. Lecturers manage a period → course → group → student hierarchy, run timed voting sessions, and view results. Only administrators manage lecturer accounts.
 
+Version 3.0.1 adds interactive quizzes and polls, question controls, live student/projector charts, and administrator JSON backup/restore. The Scientific Method question template is available when explicitly creating a quiz; startup never inserts sample polls. The administrator demo switch remains available without showing test credentials on the login screen.
+
 ## Production deployment
 
 The application is a single Node/Express container serving the React/Vite interface and API. The included `docker-compose.yml` connects it to an existing Traefik Docker network; it does not install or modify Traefik and publishes no host port.

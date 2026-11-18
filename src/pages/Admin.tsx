@@ -10,12 +10,15 @@ import { AdminRemovalPanel } from '../components/AdminRemovalPanel';
 import { UserCard } from '../components/admin/UserCard';
 import { ResetDbModal } from '../components/admin/ResetDbModal';
 import { AdminBrandingSection } from '../components/admin/AdminBrandingSection';
+import { DatabaseBackupSection } from '../components/admin/DatabaseBackupSection';
+import { AdminTabs, AdminTab } from '../components/admin/AdminTabs';
 
 export function Admin() {
   const { user: currentUser } = useAuth();
   const { t, language } = useT();
   const [users, setUsers] = useState<any[]>([]);
   const [brand, setBrand] = useState<any>({});
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [showAdd, setShowAdd] = useState(false);
   const [resetTarget, setResetTarget] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
@@ -115,53 +118,68 @@ export function Admin() {
         </div>
       </div>
 
-      <section style={{ margin: '1.5rem 0' }}>
-        <h2>{t('users')}</h2>
-        <div className="list">
-          {users.map(u => (
-            <UserCard
-              key={u.id}
-              user={u}
-              currentUserId={currentUser?.id || 0}
-              onToggle={toggleUser}
-              onReset={setResetTarget}
-              onDelete={setDeleteTarget}
-            />
-          ))}
-        </div>
-      </section>
+      <AdminTabs activeTab={activeTab} onTabChange={setActiveTab} usersCount={users.length} />
 
-      {/* Global Academic Branding Settings */}
-      <AdminBrandingSection
-        brand={brand}
-        setBrand={setBrand}
-        onSuccess={setMessage}
-        onError={setError}
-        onReload={load}
-      />
-
-      {/* Global Academic Periods & Academic Structure Cascade Removal Panel */}
-      <AdminRemovalPanel reloadUsers={load} />
-
-      {/* Danger Zone */}
-      <section style={{ margin: '3rem 0 1.5rem 0', borderTop: '2px dashed #fca5a5', paddingTop: '1.5rem' }}>
-        <h2 style={{ color: '#b91c1c' }}>⚠️ {t('dangerZone')}</h2>
-        <div className="card" style={{ borderLeft: '4px solid #ef4444', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <b style={{ color: '#991b1b', fontSize: '1.05rem' }}>{t('resetDatabase')}</b>
-            <p style={{ margin: '.3rem 0 0 0', color: '#666', fontSize: '.9rem' }}>
-              {t('resetDatabaseWarning')}
-            </p>
+      {(activeTab === 'users' || activeTab === 'all') && (
+        <section style={{ margin: '1rem 0 1.5rem 0' }}>
+          <h2>{t('users')}</h2>
+          <div className="list">
+            {users.map(u => (
+              <UserCard
+                key={u.id}
+                user={u}
+                currentUserId={currentUser?.id || 0}
+                onToggle={toggleUser}
+                onReset={setResetTarget}
+                onDelete={setDeleteTarget}
+              />
+            ))}
           </div>
-          <button
-            type="button"
-            className="danger"
-            onClick={() => setShowResetDbModal(true)}
-          >
-            {t('resetDatabase')}
-          </button>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {(activeTab === 'branding' || activeTab === 'all') && (
+        <AdminBrandingSection
+          brand={brand}
+          setBrand={setBrand}
+          onSuccess={setMessage}
+          onError={setError}
+          onReload={load}
+        />
+      )}
+
+      {(activeTab === 'structure' || activeTab === 'all') && (
+        <AdminRemovalPanel reloadUsers={load} />
+      )}
+
+      {(activeTab === 'backup' || activeTab === 'all') && (
+        <DatabaseBackupSection
+          onSuccess={setMessage}
+          onError={setError}
+          onReload={load}
+        />
+      )}
+
+      {(activeTab === 'danger' || activeTab === 'all') && (
+        <section style={{ margin: '1.5rem 0', borderTop: '2px dashed #fca5a5', paddingTop: '1.5rem' }}>
+          <h2 style={{ color: '#b91c1c' }}>⚠️ {t('dangerZone')}</h2>
+          <div className="card" style={{ borderLeft: '4px solid #ef4444', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <b style={{ color: '#991b1b', fontSize: '1.05rem' }}>{t('resetDatabase')}</b>
+              <p style={{ margin: '.3rem 0 0 0', color: '#666', fontSize: '.9rem' }}>
+                {t('resetDatabaseWarning')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => setShowResetDbModal(true)}
+            >
+              {t('resetDatabase')}
+            </button>
+          </div>
+        </section>
+      )}
 
       {showAdd && (
         <UserForm

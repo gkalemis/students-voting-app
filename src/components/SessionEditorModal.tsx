@@ -3,6 +3,7 @@ import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { translateError } from '../i18n';
 import { PresenterRow, PresenterRowEditor } from './session/PresenterRowEditor';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface SessionEditorModalProps {
   sessionId: number;
@@ -22,6 +23,7 @@ export function SessionEditorModal({ sessionId, onClose, onSaved }: SessionEdito
   const [presentations, setPresentations] = useState<PresenterRow[]>([]);
   const [newName, setNewName] = useState('');
   const [newTopic, setNewTopic] = useState('');
+  useEscapeKey(() => { if (!saving) onClose(); });
 
   useEffect(() => {
     let mounted = true;
@@ -116,8 +118,8 @@ export function SessionEditorModal({ sessionId, onClose, onSaved }: SessionEdito
   };
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 680, width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!saving) onClose(); }}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 680, width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e2e8f0', paddingBottom: '.75rem', marginBottom: '1rem' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>
@@ -129,7 +131,7 @@ export function SessionEditorModal({ sessionId, onClose, onSaved }: SessionEdito
               {t('editSessionSubtitle')}
             </p>
           </div>
-          <button type="button" className="secondary" style={{ padding: '.25rem .5rem', fontSize: '1rem', minWidth: 'auto' }} onClick={onClose}>
+          <button type="button" className="secondary" aria-label={t('close')} style={{ padding: '.25rem .5rem', fontSize: '1rem', minWidth: 'auto' }} onClick={onClose}>
             ✕
           </button>
         </div>

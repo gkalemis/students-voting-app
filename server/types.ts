@@ -108,7 +108,7 @@ export interface PresentationSession {
 export interface ParticipationToken {
   id: number;
   session_id: number;
-  token: string;
+  token?: string;
   token_hash: string;
   issued_at: string;
   expires_at: string;

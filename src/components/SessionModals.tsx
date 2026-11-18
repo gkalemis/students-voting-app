@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useT } from '../context/LocaleContext';
 import { token } from '../api';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export function SessionQrCard({
   fullJoinUrl,
@@ -57,6 +58,7 @@ export function QrModal({
   close: () => void;
 }) {
   const { t } = useT();
+  useEscapeKey(close);
 
   return (
     <div className="modal" role="dialog" aria-modal="true" onClick={close}>
@@ -100,6 +102,7 @@ export function EditModal({
   const [presenterName, setPresenterName] = useState(item.presenter_name || '');
   const [title, setTitle] = useState(item.title || '');
   const [busy, setBusy] = useState(false);
+  useEscapeKey(() => { if (!busy) close(); });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,8 +115,8 @@ export function EditModal({
   };
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <form className="card" onSubmit={handleSubmit}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!busy) close(); }}>
+      <form className="card" onClick={e => e.stopPropagation()} onSubmit={handleSubmit}>
         <h2>{t('edit')}</h2>
         <label>
           {t('presenter')}
@@ -150,6 +153,7 @@ export function CompleteModal({
   close: () => void;
 }) {
   const { t } = useT();
+  useEscapeKey(close);
 
   return (
     <div className="modal" role="dialog" aria-modal="true" onClick={close}>

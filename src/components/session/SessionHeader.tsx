@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useT } from '../../context/LocaleContext';
 import { toGreekUppercase } from '../../utils/greek';
 import { translateStatus } from '../../i18n';
@@ -29,6 +30,11 @@ export function SessionHeader({
 
   return (
     <>
+      <div style={{ marginBottom: '0.5rem' }}>
+        <Link to="/dashboard" className="button secondary outline" style={{ padding: '0.3rem 0.7rem', fontSize: '0.84rem', minHeight: 'auto' }}>
+          ← {t('dashboard')}
+        </Link>
+      </div>
       <div className="title-row">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
@@ -76,22 +82,23 @@ export function SessionHeader({
           )}
 
           {s.public_id && s.branding?.enable_sample_fixture_button !== false && s.branding?.enable_demo !== false && (
-            <button
-              type="button"
+            <a
+              href={`/join/${s.public_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn-student-phone-preview"
-              onClick={() => window.open(`/join/${s.public_id}`, '_blank', 'noopener,noreferrer')}
               title={language === 'el' ? 'Προβολή της οθόνης ψηφοφορίας φοιτητών στο κινητό σε νέα καρτέλα' : 'Preview student voting phone view in a new tab'}
             >
               <span>📱</span>
-              <span>{language === 'el' ? 'Προβολή Κινητού (Demo)' : 'Student Phone View (Demo)'}</span>
-            </button>
+              <span>{t('studentPhoneDemo')}</span>
+            </a>
           )}
 
           <button type="button" className="secondary outline" onClick={onShowQr}>
             📱 {t('qrCode')}
           </button>
 
-          <a href={`/projector/${s.public_id}`} target="_blank" rel="noreferrer" className="button secondary">
+          <a href={`/projector/${s.public_id}`} target="_blank" rel="noopener noreferrer" className="button secondary">
             📽️ {t('projector')}
           </a>
 
@@ -113,6 +120,7 @@ export function SessionHeader({
               type="button"
               className="danger outline"
               onClick={onShowDelete}
+              aria-label={t('deleteSession')}
               title={t('delete')}
               style={{ padding: '.45rem .65rem' }}
             >

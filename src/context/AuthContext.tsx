@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, token } from '../api';
+import { api, json, token } from '../api';
 import { User } from '../types';
-import { applyThemeColor } from '../theme';
+import { THEME_COLORS, applyThemeColor } from '../theme';
 import { safeStorage } from '../utils/storage';
 
 interface AuthContextType {
@@ -43,7 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = () => {
+    if (token()) {
+      api('/auth/logout', json('POST')).catch(() => {});
+    }
     safeStorage.removeItem('auth_token');
+    safeStorage.removeItem('theme_color');
+    applyThemeColor(THEME_COLORS[0]);
     setUser(null);
   };
 

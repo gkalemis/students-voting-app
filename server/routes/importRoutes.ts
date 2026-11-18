@@ -8,7 +8,7 @@ import { parseCsvText, extractRows, CsvRow } from '../csvParser';
 import { scheduleSave } from '../persistence';
 
 export const importRouter = Router();
-importRouter.use(authMiddleware);
+importRouter.use('/import', authMiddleware);
 
 // Load sample session fixture
 importRouter.post('/import/sample-fixture', (req, res) => {
@@ -106,30 +106,32 @@ const handleHierarchy = (req: any, res: any) => {
     return res.status(400).json({ error: 'Δεν βρέθηκαν έγκυρες εγγραφές στο CSV.' });
   }
 
+  const boundedRows = rows.slice(0, 500);
+  const canUse = (ownerId?: number | null) => ownerId === user.id || user.role === 'ADMIN';
   let coursesCreated = 0, periodsCreated = 0, groupsCreated = 0, studentsCreated = 0;
 
-  for (const r of rows) {
-    const periodName = (r.period || 'Τρέχουσα Περίοδος').trim();
-    const courseName = (r.course || 'Γενικό Μάθημα').trim();
-    const groupTitle = (r.group || 'Ομάδα 1').trim();
-    const studentName = (r.full_name || '').trim();
-    const presentationTitle = (r.presentation_title || '').trim() || null;
+  for (const r of boundedRows) {
+    const periodName = String(r?.period || 'Τρέχουσα Περίοδος').trim().slice(0, 150) || 'Τρέχουσα Περίοδος';
+    const courseName = String(r?.course || 'Γενικό Μάθημα').trim().slice(0, 150) || 'Γενικό Μάθημα';
+    const groupTitle = String(r?.group || 'Ομάδα 1').trim().slice(0, 150) || 'Ομάδα 1';
+    const studentName = String(r?.full_name || '').trim().slice(0, 150);
+    const presentationTitle = String(r?.presentation_title || '').trim().slice(0, 300) || null;
 
-    let period = db.periods.find(p => p.name.trim().toLowerCase() === periodName.toLowerCase() && (p.owner_id === user.id || user.role === 'ADMIN'));
+    let period = db.periods.find(p => p.name.trim().toLowerCase() === periodName.toLowerCase() && canUse(p.owner_id));
     if (!period) {
       period = { id: db.nextPeriodId++, name: periodName, owner_id: user.id };
       db.periods.push(period);
       periodsCreated++;
     }
 
-    let course = db.courses.find(c => c.period_id === period!.id && c.name.trim().toLowerCase() === courseName.toLowerCase());
+    let course = db.courses.find(c => c.period_id === period!.id && c.name.trim().toLowerCase() === courseName.toLowerCase() && canUse(c.owner_id));
     if (!course) {
       course = { id: db.nextCourseId++, name: courseName, description: null, owner_id: user.id, period_id: period.id };
       db.courses.push(course);
       coursesCreated++;
     }
 
-    let group = db.groups.find(g => g.course_id === course!.id && g.period_id === period!.id && g.title.trim().toLowerCase() === groupTitle.toLowerCase());
+    let group = db.groups.find(g => g.course_id === course!.id && g.period_id === period!.id && g.title.trim().toLowerCase() === groupTitle.toLowerCase() && canUse(g.owner_id));
     if (!group) {
       group = { id: db.nextGroupId++, title: groupTitle, course_id: course.id, period_id: period.id, owner_id: user.id, presentation_date: null };
       db.groups.push(group);
@@ -158,7 +160,7 @@ const handleHierarchy = (req: any, res: any) => {
       periods_created: periodsCreated,
       groups_created: groupsCreated,
       students_created: studentsCreated,
-      total_rows: rows.length
+      total_rows: boundedRows.length
     }
   });
 };
@@ -174,7 +176,7 @@ const handleStudents = (req: any, res: any) => {
     return res.status(404).json({ error: 'Η επιλεγμένη ομάδα δεν βρέθηκε.' });
   }
   if (user.role !== 'ADMIN' && group.owner_id !== user.id) {
-    return res.status(403).json({ error: 'Δεν έχετε δικαίωμα' });
+    return res.status(403).json({ error: 'Δεν έχετε δικαίωμα εισαγωγής φοιτητών σε αυτή την ομάδα.' });
   }
 
   let rows: CsvRow[] = [];
@@ -191,10 +193,10 @@ const handleStudents = (req: any, res: any) => {
   }
 
   let created = 0;
-  for (const r of rows) {
-    const name = (r.full_name || '').trim();
+  for (const r of rows.slice(0, 500)) {
+    const name = String(r?.full_name || '').trim().slice(0, 150);
     if (!name) continue;
-    const title = (r.presentation_title || '').trim() || null;
+    const title = String(r?.presentation_title || '').trim().slice(0, 300) || null;
 
     const existing = db.students.find(s => s.group_id === groupId && s.full_name.trim().toLowerCase() === name.toLowerCase());
     if (!existing) {

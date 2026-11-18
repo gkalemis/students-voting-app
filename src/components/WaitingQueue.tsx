@@ -35,7 +35,17 @@ export function WaitingQueue({ s }: { s: State }) {
         <div style={{ textAlign: 'left', marginTop: '0.65rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.65rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
             <b style={{ fontSize: '0.82rem', color: '#1e293b' }}>{t('presentations')}</b>
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700 }}>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: '#1d4ed8',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '0.16rem 0.5rem',
+                fontWeight: 700
+              }}
+            >
               {pendingPresentations.length} {t('pending')}
             </span>
           </div>
@@ -74,7 +84,7 @@ export function WaitingQueue({ s }: { s: State }) {
                       style={{
                         fontWeight: 700,
                         fontSize: '0.80rem',
-                        color: '#0f172a',
+                        color: '#1e3a8a',
                         lineHeight: 1.25,
                         wordBreak: 'break-word'
                       }}

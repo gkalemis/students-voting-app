@@ -1,5 +1,6 @@
 import React from 'react';
 import { useT } from '../../context/LocaleContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface SessionDeleteProps {
   show: boolean;
@@ -10,11 +11,12 @@ interface SessionDeleteProps {
 
 export function DeleteSessionModal({ show, sessionTitle, onConfirm, onCancel }: SessionDeleteProps) {
   const { t } = useT();
+  useEscapeKey(onCancel, show);
   if (!show) return null;
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 440, padding: '1.5rem' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={onCancel}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, padding: '1.5rem' }}>
         <h2>{t('confirmDelete')}</h2>
         <p style={{ margin: '.8rem 0', fontSize: '.95rem', color: '#475569' }}>
           {t('confirmDeleteSession')}
@@ -42,11 +44,12 @@ interface PresDeleteProps {
 
 export function DeletePresenterModal({ item, onConfirm, onCancel }: PresDeleteProps) {
   const { t } = useT();
+  useEscapeKey(onCancel, Boolean(item));
   if (!item) return null;
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 440, padding: '1.5rem' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={onCancel}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, padding: '1.5rem' }}>
         <h2>{t('confirmDelete')}</h2>
         <p style={{ margin: '.8rem 0', fontSize: '.95rem', color: '#475569' }}>
           {t('confirmRemovePresenter')}

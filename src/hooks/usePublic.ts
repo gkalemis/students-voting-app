@@ -2,14 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { api, connect } from '../api';
 import { State } from '../types';
 
-export function usePublic(publicId: string): [State | null, () => void] {
+export function usePublic(publicId: string): [State | null, () => void, boolean] {
   const [state, setState] = useState<State | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
-    if (!publicId) return;
-    api(`/public/sessions/${publicId}`)
-      .then(setState)
-      .catch(() => {});
+    if (!publicId) {
+      setLoading(false);
+      return;
+    }
+    api(`/public/sessions/${encodeURIComponent(publicId)}`)
+      .then(data => {
+        setState(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
   }, [publicId]);
 
   useEffect(() => {
@@ -39,5 +48,5 @@ export function usePublic(publicId: string): [State | null, () => void] {
     return () => clearInterval(timer);
   }, [publicId, state?.active_presentation?.id, load]);
 
-  return [state, load];
+  return [state, load, loading];
 }

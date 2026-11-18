@@ -20,6 +20,18 @@ The 2026-10-15 major upgrade passed host and Docker builds with Express 5.3, bcr
 
 Use synthetic data and a non-production environment. After a successful build, confirm the health endpoint, startup logs, non-root user, lack of a published host port, Traefik network attachment, and persistence across restart.
 
+The v3 smoke suite additionally covers quiz lifecycle, signed answers, result privacy, WebSocket synchronization/origin checks, first-login restrictions, cookie CSRF, validated backup/restore and token revocation. It uses disposable synthetic data only.
+
+After building the application image, test actual production startup and restart persistence without networking or production mounts:
+
+```bash
+docker run --rm --network none --tmpfs /app/data:uid=10001,gid=10001 \
+  --mount "type=bind,src=$PWD/tests/runtime-smoke.mjs,dst=/app/runtime-smoke.mjs,readonly" \
+  student-presentation-voting-voting-app node /app/runtime-smoke.mjs
+```
+
+Check runtime advisories separately with `npm audit --omit=dev`. The 2026-11-18 integration has zero runtime advisories; five high development dependency reports derive from the unpatched picomatch advisory GHSA-fc5q-39xc-vjpf. Do not apply the suggested incompatible Vite downgrade automatically.
+
 ## Manual acceptance
 
 Test both languages and widths 320, 375, 430, 768, 820, and 1024 pixels. Cover:

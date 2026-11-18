@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useT } from '../context/LocaleContext';
 import { api, json, connect } from '../api';
 import { translateError } from '../i18n';
@@ -20,6 +20,7 @@ export function Session() {
   const navigate = useNavigate();
   const { t, language } = useT();
   const [s, setS] = useState<any>(null);
+  const [loadErr, setLoadErr] = useState('');
   const [edit, setEdit] = useState<any>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -28,16 +29,7 @@ export function Session() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const load = () =>
-    api(`/sessions/${id}`)
-      .then(data => {
-        setS(data);
-        if (data.status === 'COMPLETED' && !data.results_revealed && !data.archive_snapshot && !promptDismissedRef.current) {
-          setShowArchivePrompt(true);
-        }
-      })
-      .catch(e => actions.setErr(translateError(e, language)));
+  const loadRef = useRef<() => void>(() => {});
 
   const actions = useSessionActions({
     id,
@@ -45,24 +37,64 @@ export function Session() {
     t,
     s,
     setS,
-    load,
+    load: () => loadRef.current(),
     navigate
   });
 
-  useEffect(() => { promptDismissedRef.current = false; load(); }, [id, language]);
+  const load = useCallback(() => {
+    api(`/sessions/${id}`)
+      .then(data => {
+        setLoadErr('');
+        setS(data);
+        if (data.status === 'COMPLETED' && !data.results_revealed && !data.archive_snapshot && !promptDismissedRef.current) {
+          setShowArchivePrompt(true);
+        }
+      })
+      .catch(e => {
+        const msg = translateError(e, language);
+        setLoadErr(msg);
+      });
+  }, [id, language]);
+
+  loadRef.current = load;
 
   useEffect(() => {
-    if (!s?.public_id) return;
-    const cleanup = connect(s.public_id, () => { load(); });
-    const hasVoting = s.presentations?.some((p: any) => p.status === 'VOTING_OPEN');
-    const interval = hasVoting ? setInterval(load, 2000) : undefined;
-    return () => {
-      cleanup();
-      if (interval) clearInterval(interval);
-    };
-  }, [s?.public_id, s?.presentations]);
+    promptDismissedRef.current = false;
+    load();
+  }, [load]);
 
-  if (!s) return <Layout>{actions.err || t('loading')}</Layout>;
+  // Connect WebSocket once per public_id to avoid tearing down and reconnecting every poll cycle
+  useEffect(() => {
+    if (!s?.public_id) return;
+    return connect(s.public_id, () => loadRef.current());
+  }, [s?.public_id]);
+
+  // Fallback polling only while voting is actively open
+  const hasVoting = Boolean(s?.presentations?.some((p: any) => p.status === 'VOTING_OPEN'));
+  useEffect(() => {
+    if (!s?.public_id || !hasVoting) return;
+    const interval = setInterval(() => loadRef.current(), 2500);
+    return () => clearInterval(interval);
+  }, [s?.public_id, hasVoting]);
+
+  if (!s) {
+    return (
+      <Layout>
+        {loadErr ? (
+          <div className="card" style={{ maxWidth: 520, margin: '2rem auto', textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚠️</div>
+            <h2 style={{ margin: '0 0 0.5rem 0', color: '#991b1b' }}>{t('sessionOrPollNotFound')}</h2>
+            <p style={{ color: '#475569', marginBottom: '1.25rem' }}>{loadErr}</p>
+            <Link to="/dashboard" className="button primary">
+              ← {t('backToDashboard')}
+            </Link>
+          </div>
+        ) : (
+          <p>{t('loading')}</p>
+        )}
+      </Layout>
+    );
+  }
 
   const isArchived = s.status === 'ARCHIVED';
   const fullJoinUrl = `${window.location.origin}/join/${s.public_id}`;

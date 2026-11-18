@@ -1,0 +1,124 @@
+/* Workspace Segmented Tabs & Interactive Summary Bar */
+.stats-summary-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.85rem 1.15rem;
+  margin: 0.75rem 0 1rem 0;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.stats-bar-grid {
+  display: flex;
+  align-items: stretch;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.stats-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.45rem 0.85rem !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  cursor: pointer;
+  min-height: auto !important;
+  transition: all 0.15s ease !important;
+}
+
+.stats-bar-item:hover {
+  border-color: var(--accent) !important;
+  background: #f0fdfa !important;
+  transform: translateY(-1px);
+}
+
+.stats-bar-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.stats-bar-value {
+  font-size: 1.18rem;
+  font-weight: 850;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.workspace-tabs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.3rem;
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  max-width: 100%;
+}
+
+.workspace-tab-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  padding: 0.45rem 0.9rem !important;
+  border-radius: 9px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #475569 !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  min-height: 36px !important;
+  cursor: pointer;
+  transition: all 0.15s ease !important;
+}
+
+.workspace-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+  color: #0f172a !important;
+  transform: none !important;
+}
+
+.workspace-tab-btn.active {
+  background: #ffffff !important;
+  color: var(--accent) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+}
+
+.workspace-tab-btn.danger-tab {
+  color: #b91c1c !important;
+}
+
+.workspace-tab-btn.danger-tab.active {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #991b1b !important;
+}
+
+.workspace-tab-count {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.08rem 0.42rem;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.workspace-tab-btn.active .workspace-tab-count {
+  background: color-mix(in srgb, var(--accent) 14%, #ffffff);
+  color: var(--accent);
+}

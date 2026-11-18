@@ -15,7 +15,15 @@ function errorMessage(detail:unknown,status:number){
 export async function api(path:string, options:RequestInit={}){
   const headers=new Headers(options.headers); if (!(options.body instanceof FormData)) headers.set('Content-Type','application/json');
   if(token()) headers.set('Authorization',`Bearer ${token()}`);
-  const r=await fetch(BASE+path,{...options,headers}); if(!r.ok){let d:any={};try{d=await r.json()}catch{}throw new Error(errorMessage(d.detail,r.status))}
+  const r=await fetch(BASE+path,{credentials:'same-origin',...options,headers});
+  if(!r.ok){
+    let d:any={};
+    try{d=await r.json()}catch{}
+    const err:any=new Error(errorMessage(d.detail??d.error,r.status));
+    if(d&&typeof d==='object')Object.assign(err,d);
+    err.status=r.status;
+    throw err;
+  }
   if(r.status===204)return null; return r.json();
 }
 export const json=(method:string,body?:unknown):RequestInit=>({method,body:body===undefined?undefined:JSON.stringify(body)});
@@ -46,7 +54,5 @@ export function downloadAuth(e: React.MouseEvent<HTMLAnchorElement>) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     })
-    .catch(() => {
-      window.open(href, '_blank');
-    });
+    .catch(() => {});
 }

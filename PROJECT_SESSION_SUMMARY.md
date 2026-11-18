@@ -1,8 +1,46 @@
 # Project session summary
 
-Last updated: 2026-10-18
+Last updated: 2026-11-18
 
-Current deployed release: 2.8.1
+Current deployed release: 3.0.1
+
+## v3.0.1 source publication — 2026-11-18
+
+- User authorized committing and pushing the deployed integration, including previously pending v2.8.2 changes. Production GitHub main was fetched and matches local base `ab64e8a`; no incoming changes or history conflicts.
+- Final whitespace and credential/infrastructure scans passed. Ignored environment, database, assets and backup directories remain excluded. Includes synchronized dependency manifest/lockfile, upstream static teaching resources, API/container regression tests, documentation and persistent import exceptions.
+- SSH authentication is unavailable because the agent has no loaded identities. Existing authenticated GitHub CLI HTTPS credentials are used without changing the SSH origin URL. No deployment changes are needed; verified v3.0.1 is already running. Commit/push outcome is reported after execution.
+
+## Verified v3.0.1 rollout — 2026-11-18
+
+- User authorized deployment. `students-voting` is healthy on tested image `sha256:af70231441a1ef5528a9c63642e1376030134747dc316f0955a782ffb1b56c74`. Public HTTPS health confirms version 3.0.1; homepage CSP/HSTS/content-type/frame headers and unpublished port 3000 passed checks. Startup logs confirm the existing persistent database loaded without errors.
+- Preserved database/assets bind mount. Consistent stopped-app backup: `backups/pre-deploy-3.0.1-20261118-192000/data.tar.gz`, verified to contain db.json. SHA-256: `99be78197603f0bcead659c83bf307a7918764974388334fad7a5446d276fa1b`. Prior v2.8.2 image retained as `students-voting-backup:pre-3.0.1-20261118-192000`.
+- Used reviewed temporary `/tmp/deploy-students-3.0.1.sh` to deploy the explicitly authorized, tested uncommitted integration without changing the repository script's normal Git synchronization requirements. Bash syntax and ShellCheck passed; rollback was armed and not needed. No commit or push performed. Source publication remains the next step when authorized. This entry supersedes earlier not-deployed integration statements.
+
+## AI Studio v3.0.1 integration — 2026-11-18
+
+- Integrated upstream `28561c6` relative to `55ec46d`, preserving all pending local v2.8.2 changes. Source backup verified at `backups/pre-aistudio-3.0.1-20261118-183904/source.tar.gz`. Live database/assets were not modified. No deployment, commit or push performed.
+- Added interactive quizzes/polls, the explicitly selected Scientific Method template, host lifecycle controls, live student/projector charts, administration/dashboard tabs and validated JSON backup/restore. Restore saves a safety snapshot, validates relationships/account state and revokes existing tokens; uploaded assets still require complete data-directory backups.
+- Preserved user exclusions: no default accounts/password bypass, mandatory first-login changes, no startup sample insertion, no historical grading rewrites, Express 5-compatible SPA catch-all and strict session/poll calendar dates. Preserved login credential exclusion, administrator demo toggle, environment/Traefik configuration, ownership and validated uploads. Recurring rules and import baseline updated in `AISTUDIO_IMPORT.md`.
+- Added signed poll participation tokens, cookie origin/CSRF checks, API first-login enforcement and backup integrity checks. Classroom vote limits distinguish participation tokens while retaining aggregate IP safeguards. Persistence fails closed on unreadable data rather than replacing it with seeded content.
+- PASS: TypeScript lint, host production build, existing import regression suite, new isolated v3 API/WebSocket/security/restore suite, Compose validation, Docker build and actual production-image startup/deep-link/restart-persistence smoke test. All tests use synthetic disposable data. Build reports a main-chunk size warning, tracked in TODO.
+- Runtime dependency audit: zero vulnerabilities. Development audit: five high reports from unpatched picomatch GHSA-fc5q-39xc-vjpf; incompatible automatic Vite downgrade rejected and follow-up recorded in TODO.
+- PASS: Chromium browser acceptance for credential-free Greek/English login at 320/430/768/1024 widths, actual quiz creation, question controls, mobile signed voting, live student results, horizontal/vertical projector charts, admin tabs, JSON backup download and retained demo toggle. No browser exceptions or student-view horizontal overflow. Disposable browser test server stopped after checks.
+- Tested candidate image: `sha256:af70231441a1ef5528a9c63642e1376030134747dc316f0955a782ffb1b56c74`. Read-only verification confirms production remains healthy on original v2.8.2 image `sha256:1b8b19ed1d47bc1fab98b097e48526d8b935da749e6b0ab897a2e945910d623e`.
+- Next: publish source when requested; deploy only with authorization and a consistent stopped-app database/assets backup. Local Git base remains `ab64e8a`; source changes remain uncommitted.
+
+## Verified v2.8.2 rollout — 2026-10-21
+
+- User authorized starting v2.8.2. Recreated `students-voting` on tested image `sha256:1b8b19ed1d47bc1fab98b097e48526d8b935da749e6b0ab897a2e945910d623e`; container is healthy. Public HTTPS health confirms 2.8.2. Homepage security headers, unpublished port 3000 and running image identity passed verification.
+- Preserved existing database/assets bind mount. Consistent stopped-app archive: `backups/pre-deploy-2.8.2-20261021-181205/data.tar.gz`; verified `db.json` is present. SHA-256 `03f6e47506dee8522a592e9e6b5e6a4af3c8a2fa5b619f3a0a8ab5862af3d620`. Prior image retained as `students-voting-backup:pre-2.8.2-20261021-181205`.
+- Reviewed temporary deployment script passed ShellCheck and Bash syntax validation. Rollback was armed and not needed. No commit or push was performed; source publication remains pending authorization. This supersedes the earlier not-deployed v2.8.2 status.
+
+## AI Studio v2.8.2 integration — 2026-10-21
+
+- Integrated AI Studio `55ec46d` relative to `4bdb095`: dark-blue student/presenter names, blue pending badges, dependency range synchronization and release version 2.8.2. Manifest, lockfile, footer and health endpoint agree. Kept matching Node 22 types, omitted obsolete bcrypt type package, and preserved reset command, smoke tests and all standing production integration rules.
+- Source backup: `backups/pre-aistudio-2.8.2-20261021-180421/source.tar.gz`, verified before import. No database/schema/persistence behavior changed; live database and assets were not modified. No deployment performed.
+- PASS: lint, host build, complete isolated smoke suite (dates, historical criteria, ownership, demos, reveal/archive), Compose validation, Docker build and whitespace checks. npm installs report zero vulnerabilities. Browser checks passed eight viewport/language cases for waiting-list student names, pending badge foreground/background, live presenter color and absent login credential controls. Synthetic data only; disposable server stopped.
+- Built candidate image: `sha256:1b8b19ed1d47bc1fab98b097e48526d8b935da749e6b0ab897a2e945910d623e`. Production remains healthy on deployed v2.8.1 image `sha256:5489090be85c883382ea2b1f529cec235e2071509396c9b3db4eb46ba4dc88ee`.
+- Local Git base is `ab64e8a`, with integration and handoff changes uncommitted. No commit/push performed. Next: authorized deployment with a stopped-app database/assets backup, then publication when requested. Future import baseline recorded in `AISTUDIO_IMPORT.md`: `55ec46d`.
 
 ## v2.8.1 publication preparation — 2026-10-18
 

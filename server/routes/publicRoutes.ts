@@ -7,10 +7,13 @@ import { ParticipationToken } from '../types';
 
 import { cleanupGhostPresentations } from './sessionRoutes';
 
+import { isValidPublicId, createRateLimiter } from '../security';
+
 export const publicRouter = Router();
 
 // Public Session State & Voting
 publicRouter.get('/public/sessions/:publicId', (req, res) => {
+  if (!isValidPublicId(req.params.publicId)) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
   const s = db.sessions.find(x => x.public_id === req.params.publicId);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
   cleanupGhostPresentations(s.id);
@@ -66,7 +69,25 @@ publicRouter.get('/public/sessions/:publicId', (req, res) => {
   });
 });
 
-publicRouter.post('/public/sessions/:publicId/tokens', (req, res) => {
+const tokenLimiter = createRateLimiter({
+  bucketKey: 'public_tokens',
+  windowMs: 60_000,
+  max: 300,
+  message: 'Πάρα πολλά αιτήματα εισόδου· περιμένετε λίγο'
+});
+
+const voteLimiter = createRateLimiter({
+  bucketKey: 'public_votes',
+  windowMs: 60_000,
+  max: 40,
+  clientKey: req => hashToken(String(req.headers['x-participation-token'] || req.ip)),
+  message: 'Πάρα πολλές υποβολές ψήφων· περιμένετε λίγο'
+});
+
+publicRouter.post('/public/sessions/:publicId/tokens', tokenLimiter, (req, res) => {
+  if (!isValidPublicId(req.params.publicId)) {
+    return res.status(404).json({ detail: 'Η συνεδρία δεν βρέθηκε' });
+  }
   const s = db.sessions.find(x => x.public_id === req.params.publicId);
   if (!s || s.status !== 'ACTIVE') {
     return res.status(409).json({ detail: 'Η συνεδρία δεν είναι ενεργή' });
@@ -82,7 +103,6 @@ publicRouter.post('/public/sessions/:publicId/tokens', (req, res) => {
   const tokenObj: ParticipationToken = {
     id: db.nextTokenId++,
     session_id: s.id,
-    token: rawToken,
     token_hash: hashToken(rawToken),
     issued_at: now.toISOString(),
     expires_at: expiresAt,
@@ -95,7 +115,7 @@ publicRouter.post('/public/sessions/:publicId/tokens', (req, res) => {
 
 publicRouter.get('/public/sessions/:publicId/my-vote', (req, res) => {
   const tokenHeader = req.headers['x-participation-token'] as string;
-  const s = db.sessions.find(x => x.public_id === req.params.publicId);
+  const s = isValidPublicId(req.params.publicId) ? db.sessions.find(x => x.public_id === req.params.publicId) : undefined;
   if (!s || !tokenHeader) return res.json({ scores: {} });
 
   const tokenHash = hashToken(tokenHeader);
@@ -109,10 +129,10 @@ publicRouter.get('/public/sessions/:publicId/my-vote', (req, res) => {
   res.json({ scores: vote ? vote.scores : {} });
 });
 
-publicRouter.put('/public/sessions/:publicId/vote', (req, res) => {
+publicRouter.put('/public/sessions/:publicId/vote', createRateLimiter({bucketKey:'presentation_votes_ip',windowMs:60_000,max:1200}), voteLimiter, (req, res) => {
   const header = req.headers['x-participation-token'];
   const tokenHeader = Array.isArray(header) ? header[0] : header;
-  const s = db.sessions.find(x => x.public_id === req.params.publicId);
+  const s = isValidPublicId(req.params.publicId) ? db.sessions.find(x => x.public_id === req.params.publicId) : undefined;
   if (!s || !tokenHeader) {
     return res.status(401).json({ detail: 'Μη έγκυρο διακριτικό συμμετοχής' });
   }
@@ -142,9 +162,10 @@ publicRouter.put('/public/sessions/:publicId/vote', (req, res) => {
   const criteria = db.criteria.filter(c => c.session_id === s.id);
   const scores: Record<number, number> = {};
   for (const c of criteria) {
-    const val = Number(req.body.scores?.[c.id]);
-    if (isNaN(val) || val < 1 || val > 5) {
-      return res.status(422).json({ detail: 'Απαιτείται βαθμός 1–5 για κάθε κριτήριο' });
+    const rawVal = req.body.scores?.[c.id];
+    const val = Number(rawVal);
+    if (!Number.isInteger(val) || val < 1 || val > 5) {
+      return res.status(422).json({ detail: 'Απαιτείται ακέραιος βαθμός 1–5 για κάθε κριτήριο' });
     }
     scores[c.id] = val;
   }

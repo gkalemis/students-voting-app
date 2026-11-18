@@ -1,0 +1,105 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+const root=process.cwd();
+const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'voting-v3-smoke-'));
+process.chdir(scratch);
+const bootstrap=randomBytes(24).toString('hex');
+Object.assign(process.env,{NODE_ENV:'production',SECRET_KEY:randomBytes(32).toString('hex'),ADMIN_USERNAME:'test-admin',ADMIN_PASSWORD:bootstrap,PUBLIC_BASE_URL:'https://example.invalid',ALLOWED_HOSTS:'127.0.0.1,localhost'});
+const source=f=>import(pathToFileURL(path.join(root,f)).href);
+const {default:express}=await source('node_modules/express/index.js');
+const {default:jwt}=await source('node_modules/jsonwebtoken/index.js');
+const {default:bcrypt}=await source('node_modules/bcryptjs/index.js');
+const {db}=await source('server/db.ts');
+const {config}=await source('server/config.ts');
+const {seedInitialData}=await source('server/seed.ts');
+const {saveDatabaseSync,initPersistence}=await source('server/persistence.ts');
+const app=express();app.use(express.json());
+app.use((req,res,next)=>{res.on('finish',()=>{if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&res.statusCode<400)saveDatabaseSync();});next();});
+const routers=[['authRoutes','authRouter','/api/auth'],['userRoutes','userRouter','/api/users'],['academicRoutes','academicRouter','/api'],['pollRoutes','pollRouter','/api'],['publicPollRoutes','publicPollRouter','/api'],['backupRoutes','backupRouter','/api']];
+for(const [file,name,prefix]of routers)app.use(prefix,(await source(`server/routes/${file}.ts`))[name]);
+const {WebSocketServer,WebSocket}=await source('node_modules/ws/wrapper.mjs');
+const {setupWebSocket}=await source('server/ws.ts');
+const server=app.listen(0,'127.0.0.1');
+await new Promise(r=>server.once('listening',r));
+const wss=new WebSocketServer({noServer:true});server.on('upgrade',(req,socket,head)=>setupWebSocket(wss,req,socket,head));
+const base=`http://127.0.0.1:${server.address().port}`;
+const token=user=>jwt.sign({sub:String(user.id),ver:user.auth_version},config.secretKey,{algorithm:'HS256'});
+async function request(uid,method,url,body,status=200,extra={}){
+ const user=db.users.find(u=>u.id===uid);
+ const r=await fetch(base+url,{method,headers:{...(user?{authorization:`Bearer ${token(user)}`} : {}),...(body instanceof FormData?{}:{'content-type':'application/json'}),...extra},body:body===undefined?undefined:body instanceof FormData?body:JSON.stringify(body)});
+ const text=await r.text();assert.equal(r.status,status,`${method} ${url}: ${text.slice(0,150)}`);
+ return {response:r,data:text?JSON.parse(text):null};
+}
+function upload(data){const f=new FormData();f.append('file',new Blob([typeof data==='string'?data:JSON.stringify(data)],{type:'application/json'}),'backup.json');return f;}
+function connection(publicId,origin){return new Promise(resolve=>{const ws=new WebSocket(base.replace('http:','ws:')+`/api/ws/${publicId}`,{origin});ws.on('open',()=>resolve(ws));ws.on('error',()=>resolve(null));});}
+try{
+ seedInitialData();seedInitialData();assert.equal(db.users.length,1);assert.equal(db.users[0].must_change_password,true);assert.equal(db.polls.length,0);assert.equal(db.periods.length,0);
+ const login=await request(null,'POST','/api/auth/login',{username:'test-admin',password:bootstrap});
+ assert.match(login.response.headers.get('set-cookie'),/HttpOnly/i);assert.match(login.response.headers.get('set-cookie'),/Secure/i);
+ await request(1,'GET','/api/polls',undefined,403);
+ await request(1,'PUT','/api/auth/password',{current_password:bootstrap,new_password:bootstrap+'changed'});
+ await request(null,'GET','/api/auth/me',undefined,401,{authorization:`Bearer ${login.data.access_token}`});
+ const a=await request(1,'POST','/api/users',{username:'teacher-a',full_name:'Teacher A',password:bootstrap},201);
+ const b=await request(1,'POST','/api/users',{username:'teacher-b',full_name:'Teacher B',password:bootstrap},201);
+ const uid=a.data.id,other=b.data.id;
+ for(const id of [uid,other])await request(id,'PUT','/api/auth/password',{current_password:bootstrap,new_password:bootstrap+'teacher'});
+ const period=(await request(uid,'POST','/api/periods',{name:'Period'},201)).data;
+ const course=(await request(uid,'POST','/api/courses',{name:'Course',period_id:period.id},201)).data;
+ const payload={title:'Quiz',course_id:course.id,period_id:period.id,session_date:'2026-11-18',questions:[{text:'Question one?',type:'MULTIPLE_CHOICE',options:['A','B'],correct_option_index:1},{text:'Question two?',type:'TRUE_FALSE',options:['True','False'],correct_option_index:0}]};
+ await request(uid,'POST','/api/polls',{...payload,session_date:'2026-02-30'},422);
+ await request(other,'POST','/api/polls',payload,403);
+ const poll=(await request(uid,'POST','/api/polls',payload,201)).data;
+ await request(other,'GET',`/api/polls/${poll.id}`,undefined,403);
+ const qs=(await request(uid,'GET',`/api/polls/${poll.id}`)).data.questions;
+ const control=(action,q,status=200)=>request(uid,'PUT',`/api/polls/${poll.id}/control`,{action,question_id:q},status);
+ await control('open_question',999999,404);
+ await control('open_question',qs[1].id);
+ const pub=`/api/public/polls/${poll.public_id}`;
+ const hidden=(await request(null,'GET',pub)).data;assert.equal(hidden.active_question.correct_option_index,null);assert.equal(hidden.results,null);
+ const participant=(await request(null,'POST',pub+'/tokens',{})).data;
+ await request(null,'POST',pub+'/answer',{question_id:qs[1].id,selected_index:0},401);
+ const answer=(idx,status=200)=>request(null,'POST',pub+'/answer',{question_id:qs[1].id,selected_index:idx},status,{'x-participation-token':participant.token});
+ await answer(99,422);await answer(0);await answer(1);assert.equal(db.pollAnswers.length,1);
+ const ws=await connection(poll.public_id,'https://example.invalid');assert.ok(ws);
+ const received=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Missing poll WebSocket event')),2000);ws.once('message',()=>{clearTimeout(timer);resolve();});});
+ await control('show_results');await received;ws.close();
+ assert.equal((await request(null,'GET',pub)).data.results.total_votes,1);
+ assert.equal(await connection(poll.public_id,'https://other.invalid'),null);
+ await control('close_question');await answer(0,409);
+ await control('skip_question',qs[1].id);await control('restore_question',qs[1].id);await control('standby');await control('complete');
+ await request(null,'POST',pub+'/tokens',{},409);await control('reopen_poll');
+ await request(uid,'PUT',`/api/polls/${poll.id}`,{...payload,session_date:'invalid'},422);
+ assert.equal(db.polls[0].session_date,'2026-11-18');
+ await request(uid,'GET','/api/admin/backup',undefined,403);
+ const exported=(await request(1,'GET','/api/admin/backup')).data;
+ const invalid=structuredClone(exported);invalid.users.push({...invalid.users[0]});
+ await request(1,'POST','/api/admin/backup/restore',upload(invalid),400);
+ const before=JSON.stringify(db);
+ const brokenLink=structuredClone(exported);brokenLink.pollAnswers[0].question_id=999999;
+ await request(1,'POST','/api/admin/backup/restore',upload(brokenLink),400);assert.equal(JSON.stringify(db),before);
+ await request(1,'POST','/api/admin/backup/restore',upload('{broken'),400);assert.equal(JSON.stringify(db),before);
+ const oldToken=token(db.users[0]);
+ await request(1,'POST','/api/admin/backup/restore',upload(exported));
+ await request(null,'GET','/api/auth/me',undefined,401,{authorization:`Bearer ${oldToken}`});
+ assert.equal(db.pollAnswers.length,1);assert.equal(db.pollQuestions.length,2);
+ assert.ok(fs.readdirSync('data').some(f=>f.startsWith('db.pre-restore.')));
+ saveDatabaseSync();db.polls=[];initPersistence();assert.equal(db.polls.length,1);
+ await request(uid,'DELETE',`/api/polls/${poll.id}`);assert.equal(db.pollAnswers.length,0);assert.equal(db.pollQuestions.length,0);
+ const cookie=encodeURIComponent(token(db.users[0]));
+ await request(null,'POST','/api/auth/logout',{},403,{cookie:`auth_token=${cookie}`,origin:'https://other.invalid'});
+ await request(null,'GET','/api/auth/me',undefined,401,{cookie:'auth_token=%E0%A4%A'});
+ console.log('PASS: no default/sample startup, first-login enforcement, quiz lifecycle, ownership, signed answers, WebSocket sync/origin, result privacy, backup validation/restore/revocation, persistence and cookie CSRF');
+ if(process.env.SMOKE_BROWSER==='1'){
+  config.publicBaseUrl=base;
+  app.get('/__test/session',(_req,res)=>res.json({token:token(db.users[0])}));
+  app.use(express.static(path.join(root,'dist')));
+  app.get('/{*path}',(_req,res)=>res.sendFile(path.join(root,'dist/index.html')));
+  console.log(`BROWSER_TEST_URL=${base}`);
+  await new Promise(()=>{});
+ }
+}catch(error){console.error(error);process.exitCode=1;}
+finally{wss.close();server.close();process.exit(process.exitCode||0);}

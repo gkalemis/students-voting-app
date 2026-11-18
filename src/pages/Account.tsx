@@ -7,7 +7,7 @@ import { translateError } from '../i18n';
 import { Layout } from '../components/Layout';
 import { PasswordInput } from '../components/PasswordInput';
 import { safeStorage } from '../utils/storage';
-import { applyThemeColor } from '../theme';
+import { THEME_COLORS, applyThemeColor } from '../theme';
 
 export function Account() {
   const { user, setUser } = useAuth();
@@ -20,8 +20,8 @@ export function Account() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    applyThemeColor('#0d9488');
-  }, []);
+    applyThemeColor(user?.theme_color || THEME_COLORS[0]);
+  }, [user?.theme_color]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,14 +42,14 @@ export function Account() {
 
   return (
     <Layout>
-      <section className="card login" style={{ margin: 'auto', borderTop: '4px solid #0d9488' }}>
+      <section className="card login" style={{ margin: 'auto', borderTop: '4px solid var(--accent)' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
           padding: '0.85rem 1.1rem',
           borderRadius: '10px',
-          background: 'linear-gradient(135deg, #0d9488 0%, color-mix(in srgb, #0d9488 60%, #ffffff) 100%)',
+          background: 'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 65%, #0f172a) 100%)',
           color: '#ffffff',
           marginBottom: '1.25rem'
         }}>

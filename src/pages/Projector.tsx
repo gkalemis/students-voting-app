@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useT } from '../context/LocaleContext';
 import { usePublic } from '../hooks/usePublic';
+import { usePublicPoll } from '../hooks/usePublicPoll';
+import { ProjectorPollView } from '../components/projector/ProjectorPollView';
 import { BrandHeader } from '../components/BrandHeader';
 import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
@@ -14,7 +16,8 @@ import { applyThemeColor } from '../theme';
 export function Projector() {
   const { publicId = '' } = useParams();
   const { t } = useT();
-  const [s, load] = usePublic(publicId);
+  const [s, load, sessionLoading] = usePublic(publicId);
+  const [poll, , pollLoading] = usePublicPoll(publicId);
 
   React.useEffect(() => {
     if (s?.theme_color) {
@@ -22,9 +25,27 @@ export function Projector() {
     }
   }, [s?.theme_color]);
 
-  if (!s) return <>{t('loading')}</>;
+  const fullJoinUrl = `${window.location.origin}/join/${poll?.public_id || s?.public_id || publicId}`;
 
-  const fullJoinUrl = `${window.location.origin}/join/${s.public_id}`;
+  if (poll) {
+    return <ProjectorPollView poll={poll} fullJoinUrl={fullJoinUrl} />;
+  }
+
+  if (!s) {
+    if (pollLoading || sessionLoading) return <main className="center">{t('loading')}</main>;
+    return (
+      <main className="center" style={{ flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
+        <div className="card" style={{ maxWidth: '440px', padding: '2rem' }}>
+          <h2 style={{ marginTop: 0 }}>🔍 {t('sessionOrPollNotFound')}</h2>
+          <p>{t('sessionOrPollNotFoundDesc')}</p>
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+            <LanguageButton />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const allClosed = Boolean(s.presentations && s.presentations.length > 0 && s.presentations.every((p: any) => p.status === 'EVALUATED' || p.status === 'SKIPPED' || p.status === 'NO_VOTES'));
   const showResults = Boolean(s.results && s.results.length > 0 && !s.active_presentation && (s.results_revealed || s.status === 'COMPLETED'));
 

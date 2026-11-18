@@ -1,34 +1,45 @@
+import crypto from 'crypto';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { db, userJson } from '../db';
 import { adminMiddleware } from '../middleware';
+import { parsePositiveInt } from '../security';
 import { User } from '../types';
-import crypto from 'crypto';
 
 export const userRouter = Router();
 
 userRouter.use(adminMiddleware);
 
-userRouter.get('/', (req, res) => {
+userRouter.get('/', (_req, res) => {
   res.json(db.users.map(userJson));
 });
 
 userRouter.post('/', (req, res) => {
-  const { username, full_name, password, role } = req.body;
-  if (!/^[A-Za-z0-9_.-]{3,100}$/.test(username || '') || !full_name?.trim() || typeof password !== 'string' || password.length < 10) {
-    return res.status(422).json({ detail: 'Μη έγκυρα στοιχεία χρήστη ή κωδικός μικρότερος από 10 χαρακτήρες' });
+  const cleanUsername = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+  const cleanFullName = typeof req.body?.full_name === 'string' ? req.body.full_name.trim().slice(0, 150) : '';
+  const rawPassword = typeof req.body?.password === 'string' ? req.body.password : '';
+  const safeRole = req.body?.role === 'ADMIN' ? 'ADMIN' : 'LECTURER';
+
+  if (!/^[a-zA-Z0-9._-]{3,100}$/.test(cleanUsername)) {
+    return res.status(400).json({ detail: 'username: pattern must be 3-100 valid characters' });
   }
-  if (db.users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+  if (!cleanFullName) {
+    return res.status(400).json({ detail: 'full_name: required' });
+  }
+  if (rawPassword.length < 10 || rawPassword.length > 200) {
+    return res.status(400).json({ detail: 'password: must be 10-200 characters' });
+  }
+  if (db.users.some(u => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
     return res.status(409).json({ detail: 'Το όνομα χρήστη υπάρχει ήδη' });
   }
   const newUser: User = {
     id: db.nextUserId++,
-    username,
-    full_name,
-    password_hash: bcrypt.hashSync(password, 10),
-    role: role || 'LECTURER',
+    username: cleanUsername,
+    full_name: cleanFullName,
+    password_hash: bcrypt.hashSync(rawPassword, 10),
+    role: safeRole,
     active: true,
-    must_change_password: true, // newly created users must change password on first login
+    must_change_password: true,
     auth_version: 0,
     theme_color: '#0e2a47'
   };
@@ -37,7 +48,8 @@ userRouter.post('/', (req, res) => {
 });
 
 userRouter.patch('/:uid', (req, res) => {
-  const user = db.users.find(u => u.id === Number(req.params.uid));
+  const uid = parsePositiveInt(req.params.uid);
+  const user = uid ? db.users.find(u => u.id === uid) : undefined;
   if (!user) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
   const currentUser = (req as any).user as User;
   if (req.body.active !== undefined) {
@@ -47,26 +59,27 @@ userRouter.patch('/:uid', (req, res) => {
     user.active = Boolean(req.body.active);
     user.auth_version++;
   }
-  if (req.body.password) {
-    if (typeof req.body.password !== 'string' || req.body.password.length < 10) {
-      return res.status(422).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
+  if (req.body.password !== undefined) {
+    if (typeof req.body.password !== 'string' || req.body.password.length < 10 || req.body.password.length > 200) {
+      return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει 10 έως 200 χαρακτήρες' });
     }
     user.password_hash = bcrypt.hashSync(req.body.password, 10);
+    user.must_change_password = true;
     user.auth_version++;
-  }
-  if (req.body.must_change_password !== undefined) {
-    user.must_change_password = Boolean(req.body.must_change_password);
   }
   res.json(userJson(user));
 });
 
 userRouter.post('/:uid/reset-password', (req, res) => {
-  const user = db.users.find(u => u.id === Number(req.params.uid));
+  const uid = parsePositiveInt(req.params.uid);
+  const user = uid ? db.users.find(u => u.id === uid) : undefined;
   if (!user) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
 
-  // Custom password provided or generate a strong temp password
-  const tempPassword = req.body.password?.trim() || `Temp!${crypto.randomBytes(12).toString('base64url')}`;
-  if (tempPassword.length < 10) return res.status(422).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
+  const customPw = typeof req.body?.password === 'string' ? req.body.password.trim() : '';
+  if (customPw && (customPw.length < 10 || customPw.length > 200)) {
+    return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει 10 έως 200 χαρακτήρες' });
+  }
+  const tempPassword = customPw || `Tmp!${crypto.randomBytes(9).toString('base64url')}`;
   user.password_hash = bcrypt.hashSync(tempPassword, 10);
   user.must_change_password = true;
   user.auth_version++;
@@ -79,18 +92,19 @@ userRouter.post('/:uid/reset-password', (req, res) => {
 });
 
 userRouter.delete('/:uid', (req, res) => {
-  const user = db.users.find(u => u.id === Number(req.params.uid));
+  const uid = parsePositiveInt(req.params.uid);
+  const user = uid ? db.users.find(u => u.id === uid) : undefined;
   if (!user) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
   const currentUser = (req as any).user as User;
   if (user.id === currentUser.id) {
     return res.status(400).json({ detail: 'Δεν μπορείτε να διαγράψετε τον εαυτό σας' });
   }
   const adminId = currentUser.id;
-  // Reassign owned periods, courses, groups, sessions to current admin
   db.periods.forEach(p => { if (p.owner_id === user.id) p.owner_id = adminId; });
   db.courses.forEach(c => { if (c.owner_id === user.id) c.owner_id = adminId; });
   db.groups.forEach(g => { if (g.owner_id === user.id) g.owner_id = adminId; });
   db.sessions.forEach(s => { if (s.owner_id === user.id) s.owner_id = adminId; });
+  db.polls.forEach(p => { if (p.owner_id === user.id) p.owner_id = adminId; });
 
   db.users = db.users.filter(u => u.id !== user.id);
   res.status(204).send();

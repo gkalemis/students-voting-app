@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.1 — 2026-11-14
+
+- **Interactive Quiz Presenter Controls & Scientific Method Bank**: Added non-sequential question selection, projector standby mode, question skip/restore, Quiz reopening (`reopen_poll`), and refined all 19 Scientific Method questions grammatically, syntactically, and scientifically.
+- **Security Hardening & Dependency Refresh**: Enforced strict resource ownership checks and input clamping across API routes, upgraded student tokens to CSPRNG, updated all npm dependencies (`0` vulnerabilities), and improved 404/error handling across public and authenticated routes.
+- **Menu, Navigation & UX Overhaul**: Redesigned the top navigation bar into a clean 3-zone layout, organized Dashboard and Admin hubs with segmented workspace tabs and clickable summary stats, fixed inline `PATCH` editing, eliminated WebSocket reconnect loops in live sessions, replaced `window.open` with accessible anchor links, added `Escape` dismissal across modals, and upgraded version to `3.0.1`.
+
+## 2.8.2 — 2026-10-21
+
+- Student Voting Screen Typography & Status Styling: updated presenter and student names on the voting and waiting queue screens to dark blue (`#1e3a8a`), and styled the pending status badges (`PENDING` / `ΣΕ ΑΝΑΜΟΝΗ`) with blue text (`#1d4ed8`) inside a light-blue frame (`#eff6ff` / `#bfdbfe`).
+- Dependency Manifest Synchronization: aligned `package.json` dependency and devDependency version ranges with the latest installed minor and patch versions (`react@19.3.1`, `react-router-dom@7.18.4`, `ws@8.22.0`, `tsx@4.23.15`).
+- Upgraded patch version to 2.8.2 across package manifests, server health endpoints, and global footers.
+
 ## 2.8.1 — 2026-10-18
 
 - Presentation Date Selection at Session Creation: added explicit presentation date picker during session creation with automatic prefill from student group and full lecturer customization.

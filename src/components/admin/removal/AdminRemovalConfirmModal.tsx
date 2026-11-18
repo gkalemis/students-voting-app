@@ -1,5 +1,6 @@
 import React from 'react';
 import { useT } from '../../../context/LocaleContext';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 interface ConfirmModalData {
   path: string;
@@ -22,10 +23,11 @@ export function AdminRemovalConfirmModal({
   onClose
 }: AdminRemovalConfirmModalProps) {
   const { t } = useT();
+  useEscapeKey(() => { if (!busyAction) onClose(); });
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 440 }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!busyAction) onClose(); }}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
         <h2>{confirmModal.verb === 'archive' ? t('confirmArchive') : t('confirmDelete')}</h2>
         <p style={{ margin: '.8rem 0', fontSize: '.95rem' }}>
           <b>{confirmModal.label}</b>

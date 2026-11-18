@@ -38,7 +38,7 @@ export function useDashboardState() {
 
   const [concurrencyLock, setConcurrencyLock] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ path: string; label: string; type: string } | null>(null);
-  const [enableSampleFixtureButton, setEnableSampleFixtureButton] = useState(true);
+  const [enableSampleFixtureButton, setEnableSampleFixtureButton] = useState(false);
 
   useEffect(() => {
     api('/public/branding')
@@ -79,6 +79,7 @@ export function useDashboardState() {
     setErr('');
     setNotice('');
     if (kind === 'group' && !courses.length) return setErr(t('courseFirst'));
+    if (kind === 'group' && !periods.length) return setErr(t('periodFirst'));
     if (kind === 'session' && !courses.length) return setErr(t('courseFirst'));
     if (kind === 'session' && !groups.length) return setErr(t('groupFirst'));
     setForm(kind);
@@ -93,8 +94,8 @@ export function useDashboardState() {
       reload();
       navigate(`/session/${sessionId}`);
     } catch (e: any) {
-      if (e?.status === 409 && e?.active_session) {
-        setConcurrencyLock(e.active_session);
+      if (e?.error === 'SESSION_CONCURRENCY_LOCK' || e?.status === 409) {
+        setConcurrencyLock(e?.active_session || e);
       } else {
         setErr(translateError(e, language));
       }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../../context/LocaleContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   lock: any;
@@ -9,11 +10,12 @@ interface Props {
 
 export function ConcurrencyLockModal({ lock, onClose }: Props) {
   const { t, language } = useT();
+  useEscapeKey(onClose, Boolean(lock));
   if (!lock) return null;
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 480, padding: '1.5rem', borderLeft: '5px solid #ef4444' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, padding: '1.5rem', borderLeft: '5px solid #ef4444' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.8rem' }}>
           <span style={{ fontSize: '1.8rem' }}>⛔</span>
           <h2 style={{ margin: 0, fontSize: '1.25rem' }}>

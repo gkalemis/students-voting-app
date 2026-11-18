@@ -4,9 +4,13 @@ import {
   Student, Criterion, Presentation, PresentationSession,
   ParticipationToken, Vote, AnonymousVoteScore
 } from './types';
+import { PollSession, PollQuestion, PollAnswer } from './pollTypes';
 
 export const db = {
   users: [] as User[],
+  polls: [] as PollSession[],
+  pollQuestions: [] as PollQuestion[],
+  pollAnswers: [] as PollAnswer[],
   globalBranding: {
     university_name: {
       el: 'Εθνικό Μετσόβειο Πολυτεχνείο',
@@ -46,6 +50,9 @@ export const db = {
   nextPresentationId: 1,
   nextTokenId: 1,
   nextVoteId: 1,
+  nextPollId: 1,
+  nextPollQuestionId: 1,
+  nextPollAnswerId: 1,
 };
 
 export function hashToken(t: string): string {

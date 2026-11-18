@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
 import { PasswordInput } from './PasswordInput';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export function UserForm({
   close, saved, failed
@@ -15,6 +16,7 @@ export function UserForm({
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  useEscapeKey(() => { if (!busy) close(); });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,8 +37,8 @@ export function UserForm({
   }
 
   return (
-    <div className="modal">
-      <form className="card" onSubmit={submit}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!busy) close(); }}>
+      <form className="card" onClick={e => e.stopPropagation()} onSubmit={submit}>
         <h2>{t('addLecturer')}</h2>
         <label>
           {t('username')}

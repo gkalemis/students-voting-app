@@ -1,5 +1,6 @@
 import React from 'react';
 import { useT } from '../../context/LocaleContext';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   target: { path: string; label: string; type: string } | null;
@@ -9,11 +10,12 @@ interface Props {
 
 export function DashboardDeleteModal({ target, onConfirm, onCancel }: Props) {
   const { t, language } = useT();
+  useEscapeKey(onCancel, Boolean(target));
   if (!target) return null;
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 440, padding: '1.5rem' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={onCancel}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, padding: '1.5rem' }}>
         <h2>{t('confirmDelete')}</h2>
         <p style={{ margin: '.8rem 0', fontSize: '.95rem', color: '#475569' }}>
           {language === 'el' ? 'Είστε σίγουροι ότι θέλετε να διαγράψετε το στοιχείο: ' : 'Are you sure you want to delete: '}

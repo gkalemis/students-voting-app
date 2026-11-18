@@ -18,6 +18,9 @@ import { brandingRouter, ASSETS_DIR } from './server/routes/brandingRoutes';
 import { importRouter } from './server/routes/importRoutes';
 import { studentRouter } from './server/routes/studentRoutes';
 import { config } from './server/config';
+import { pollRouter } from './server/routes/pollRoutes';
+import { publicPollRouter } from './server/routes/publicPollRoutes';
+import { backupRouter } from './server/routes/backupRoutes';
 
 const PORT = config.port;
 
@@ -66,6 +69,10 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '1mb' }));
+app.use((err: any, _req: any, res: any, next: any) => {
+  if (err?.type === 'entity.parse.failed') return res.status(400).json({ detail: 'Μη έγκυρο σώμα JSON' });
+  next(err);
+});
 app.use('/assets', express.static(ASSETS_DIR));
 
 // Auto-save data on modifying requests
@@ -84,16 +91,13 @@ import { adminMiddleware } from './server/middleware';
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.8.1' });
+  res.json({ status: 'ok', version: '3.0.1' });
 });
 
 // Completely clean / reset database
 app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
   try {
-    const dbFilePath = path.resolve('data', 'db.json');
-    if (fs.existsSync(dbFilePath)) {
-      fs.unlinkSync(dbFilePath);
-    }
+    const admin = (req as any).user;
     const currentLogo = db.globalBranding?.logo_url || null;
     db.periods = [];
     db.courses = [];
@@ -105,8 +109,11 @@ app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
     db.tokens = [];
     db.votes = [];
     db.anonymousVoteScores = [];
-    db.users = [];
-    db.nextUserId = 1;
+    db.polls = [];
+    db.pollQuestions = [];
+    db.pollAnswers = [];
+    db.users = [admin];
+    db.nextUserId = admin.id + 1;
     db.nextPeriodId = 1;
     db.nextCourseId = 1;
     db.nextGroupId = 1;
@@ -116,6 +123,9 @@ app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
     db.nextPresentationId = 1;
     db.nextTokenId = 1;
     db.nextVoteId = 1;
+    db.nextPollId = 1;
+    db.nextPollQuestionId = 1;
+    db.nextPollAnswerId = 1;
 
     db.globalBranding = {
       university_name: {
@@ -145,6 +155,7 @@ app.post('/api/admin/reset-db', adminMiddleware, (req, res) => {
 
 // API Routes
 app.use('/api', publicRouter);
+app.use('/api', publicPollRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api', academicRouter);
@@ -154,6 +165,9 @@ app.use('/api', presentationRouter);
 app.use('/api', exportRouter);
 app.use('/api', brandingRouter);
 app.use('/api', importRouter);
+app.use('/api', pollRouter);
+app.use('/api', backupRouter);
+app.use('/api', (_req, res) => res.status(404).json({ detail: 'Δεν βρέθηκε' }));
 
 async function startServer() {
   const server = http.createServer(app);

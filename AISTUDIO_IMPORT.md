@@ -12,4 +12,8 @@ These production integration rules apply to every import until the owner explici
 - Do not run upstream startup migrations that rename or reweight historical grading criteria. New defaults apply to new sessions; preserve existing names, weights and meaning when displaying/translating historical criteria.
 - Back up source before integration. Run lint/build, isolated authorization/demo tests, and login-screen checks before reporting completion. Deploy, commit and push only when requested.
 
-Last integrated application baseline: `4bdb095` (AI Studio v2.8.1), 2026-10-18.
+- Never insert sample polls during startup. Keep optional question templates for explicit user-created quizzes only.
+- Preserve Express 5's `/{*path}` SPA route and strict calendar-date validation for sessions and polls.
+- Keep mandatory first-login changes for newly created and reset accounts, including administrators.
+
+Last integrated application baseline: `28561c6` (AI Studio v3.0.1), 2026-11-18. Integrated source is tested and deployed; publication is pending authorization.

@@ -14,6 +14,12 @@ Passwords are bcrypt hashes. JWTs contain an authentication version; password ch
 
 Participant credentials are random and session-scoped. Votes are editable during the open window. Completion converts voting records to anonymous score rows and removes token-linked votes. WebSocket events prompt clients to refresh authoritative state.
 
+Quizzes use separate poll/question/answer collections and signed, poll-scoped participation credentials. Owners control question visibility, admission, answer windows and result revelation. Existing grading records are preserved without renaming or reweighting.
+
+Authentication accepts versioned HS256 bearer tokens and HttpOnly cookies. Production cookies use Secure and SameSite=Lax; cookie-authenticated mutations require a matching origin. Temporary-password restrictions apply at the API boundary.
+
+Administrator JSON restore validates IDs, relationships, dates and account state before replacing data, saves a pre-restore snapshot and revokes existing login tokens. JSON exports contain password hashes and must be protected. Uploaded assets require a separate complete `data/` archive; they are not embedded in JSON exports.
+
 ## Security boundaries
 
 Production configuration is read from ignored `.env` values and validated at startup. Express enforces a host allowlist, request-size limit, role middleware, security headers, and production HSTS. Branding uploads use size, MIME, and file-signature checks and randomized filenames. The container runs as UID 10001 with `no-new-privileges`; no application port is published directly.

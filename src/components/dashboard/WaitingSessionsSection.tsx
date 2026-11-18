@@ -69,6 +69,8 @@ export function WaitingSessionsSection({ sessions, onAddSession, onActivate, onE
                     className="danger outline"
                     style={{ fontSize: '.82rem', padding: '.35rem .6rem' }}
                     onClick={() => onDelete(s)}
+                    aria-label={`${t('delete')}: ${s.title || s.session_date}`}
+                    title={t('delete')}
                   >
                     🗑️
                   </button>

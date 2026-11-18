@@ -2,8 +2,9 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { db, userJson } from '../db';
-import { authMiddleware, SECRET_KEY } from '../middleware';
+import { authMiddleware, clearAuthCookie, SECRET_KEY, setAuthCookie } from '../middleware';
 import { User } from '../types';
+import { createRateLimiter } from '../security';
 
 export const authRouter = Router();
 const loginAttempts = new Map<string, number[]>();
@@ -16,12 +17,26 @@ function allowLogin(username: string): boolean {
   recent.push(now); loginAttempts.set(username, recent); return true;
 }
 
-authRouter.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const cleanUsername = (username || '').trim().toLowerCase();
+const loginLimiter = createRateLimiter({
+  bucketKey: 'auth_login',
+  windowMs: 60_000,
+  max: 10,
+  message: 'Πάρα πολλές αποτυχημένες προσπάθειες σύνδεσης· δοκιμάστε ξανά σε 1 λεπτό'
+});
+
+authRouter.post('/login', loginLimiter, (req, res) => {
+  const rawUser = req.body?.username;
+  const rawPass = req.body?.password;
+  if (typeof rawUser !== 'string' || typeof rawPass !== 'string' || rawUser.length > 200 || rawPass.length > 200) {
+    return res.status(400).json({ detail: 'Μη έγκυρη μορφή στοιχείων σύνδεσης' });
+  }
+
+  const cleanUsername = rawUser.trim().toLowerCase();
   if (!allowLogin(cleanUsername)) return res.status(429).json({ detail: 'Πάρα πολλές προσπάθειες· δοκιμάστε αργότερα' });
   const user = db.users.find(u => u.username.toLowerCase() === cleanUsername);
-  const isPasswordValid = bcrypt.compareSync(password || '', user?.password_hash || dummyHash);
+
+  const targetHash = user?.password_hash || dummyHash;
+  const isPasswordValid = bcrypt.compareSync(rawPass, targetHash);
 
   if (!user || !user.active || !isPasswordValid) {
     return res.status(401).json({ detail: 'Λανθασμένα στοιχεία σύνδεσης' });
@@ -31,13 +46,21 @@ authRouter.post('/login', (req, res) => {
   const token = jwt.sign(
     { sub: String(user.id), role: user.role, ver: user.auth_version },
     SECRET_KEY,
-    { expiresIn: '12h' }
+    { expiresIn: '12h', algorithm: 'HS256' }
   );
+  setAuthCookie(res, req, token);
   res.json({
     access_token: token,
     token_type: 'bearer',
     user: userJson(user)
   });
+});
+
+authRouter.post('/logout', authMiddleware, (req, res) => {
+  const user = (req as any).user as User;
+  user.auth_version++;
+  clearAuthCookie(res, req);
+  res.json({ ok: true });
 });
 
 authRouter.get('/me', authMiddleware, (req, res) => {
@@ -47,11 +70,11 @@ authRouter.get('/me', authMiddleware, (req, res) => {
 authRouter.put('/password', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
   const { current_password, new_password } = req.body;
-  if (!new_password || typeof new_password !== 'string' || new_password.length < 10) {
-    return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει τουλάχιστον 10 χαρακτήρες' });
+  if (typeof new_password !== 'string' || new_password.length < 10 || new_password.length > 200) {
+    return res.status(400).json({ detail: 'Ο κωδικός πρέπει να έχει 10 έως 200 χαρακτήρες' });
   }
-  if (current_password) {
-    if (!bcrypt.compareSync(current_password, user.password_hash)) {
+  if (typeof current_password === 'string' && current_password.length > 0) {
+    if (current_password.length > 200 || !bcrypt.compareSync(current_password, user.password_hash)) {
       return res.status(400).json({ detail: 'Μη έγκυρος κωδικός' });
     }
     if (current_password === new_password) {
@@ -66,15 +89,18 @@ authRouter.put('/password', authMiddleware, (req, res) => {
   const token = jwt.sign(
     { sub: String(user.id), role: user.role, ver: user.auth_version },
     SECRET_KEY,
-    { expiresIn: '12h' }
+    { expiresIn: '12h', algorithm: 'HS256' }
   );
+  setAuthCookie(res, req, token);
   res.json({ ok: true, access_token: token, user: userJson(user) });
 });
 
 authRouter.put('/theme', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
-  const { color } = req.body;
-  if (!/^#[0-9a-f]{6}$/i.test(color || '')) return res.status(422).json({ detail: 'Μη έγκυρο χρώμα' });
-  user.theme_color = color.toLowerCase();
+  const rawColor = typeof req.body?.color === 'string' ? req.body.color.trim().toLowerCase() : '';
+  if (!/^#[0-9a-f]{6}$/.test(rawColor)) {
+    return res.status(400).json({ detail: 'Μη έγκυρος κωδικός χρώματος' });
+  }
+  user.theme_color = rawColor;
   res.json({ theme_color: user.theme_color });
 });

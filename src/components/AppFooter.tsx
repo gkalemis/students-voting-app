@@ -14,7 +14,7 @@ export function AppFooter({ className = '' }: AppFooterProps) {
   return (
     <footer className={`app-global-footer ${className}`} role="contentinfo">
       <span>
-        © {currentYear} {creator} · {versionLabel} 2.8.1
+        © {currentYear} {creator} · {versionLabel} 3.0.1
       </span>
     </footer>
   );

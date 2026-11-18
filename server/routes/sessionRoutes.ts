@@ -2,25 +2,22 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { db, getVoteCount, calculateResults, effectiveBranding, getDefaultCriteria } from '../db';
 import { authMiddleware } from '../middleware';
+import { parsePositiveInt } from '../security';
 import { broadcastSession } from '../ws';
 import { User, PresentationSession } from '../types';
 import { deleteSessionEverywhere, sessionLifecycleRouter } from './sessionLifecycleRoutes';
 import { config } from '../config';
 import { validSessionDate } from '../dates';
 import { demoSessionRouter } from './demoSessionRoutes';
-
+import { canOwn } from '../sessionAccess';
 export function cleanupGhostPresentations(_sessionId: number) {}
 export { deleteSessionEverywhere };
 export const sessionRouter = Router();
 sessionRouter.use(sessionLifecycleRouter);
 sessionRouter.use(demoSessionRouter);
-
 sessionRouter.get('/sessions', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
-  const list = user.role === 'ADMIN'
-    ? db.sessions
-    : db.sessions.filter(s => s.owner_id === user.id);
-
+  const list = user.role === 'ADMIN' ? db.sessions : db.sessions.filter(s => s.owner_id === user.id);
   res.json(list.map(s => {
     const course = db.courses.find(c => c.id === s.course_id);
     const group = db.groups.find(g => g.id === s.group_id);
@@ -43,30 +40,42 @@ sessionRouter.get('/sessions', authMiddleware, (req, res) => {
 
 sessionRouter.post('/sessions', authMiddleware, (req, res) => {
   const user = (req as any).user as User;
-  const { course_id, period_id, group_id, session_date, title, criteria } = req.body;
-  if (!validSessionDate(session_date)) return res.status(422).json({ detail: 'Μη έγκυρη ημερομηνία συνεδρίας' });
+  const { course_id, period_id, group_id, session_date, title, criteria } = req.body || {};
+
+  const cid = parsePositiveInt(course_id);
+  const pid = parsePositiveInt(period_id);
+  const gid = parsePositiveInt(group_id);
+  if (!cid || !pid || !gid) {
+    return res.status(400).json({ detail: 'Απαιτούνται έγκυρο μάθημα, περίοδος και ομάδα' });
+  }
+
+  const course = db.courses.find(c => c.id === cid);
+  const period = db.periods.find(p => p.id === pid);
+  const targetGroup = db.groups.find(g => g.id === gid);
+  if (!course || !period || !targetGroup) {
+    return res.status(404).json({ detail: 'Το μάθημα, η περίοδος ή η ομάδα δεν βρέθηκε' });
+  }
+  if (!canOwn(user, course.owner_id) || !canOwn(user, period.owner_id) || !canOwn(user, targetGroup.owner_id)) {
+    return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα χρήσης αυτών των πόρων' });
+  }
+
   const publicId = crypto.randomBytes(8).toString('base64url');
-  const targetGroup = db.groups.find(g => g.id === Number(group_id));
-  const targetCourse = db.courses.find(c => c.id === Number(course_id));
-  const targetPeriod = db.periods.find(p => p.id === Number(period_id));
-  if (!targetGroup || !targetCourse || !targetPeriod || targetGroup.course_id !== targetCourse.id || targetGroup.period_id !== targetPeriod.id) {
-    return res.status(400).json({ detail: 'Μη έγκυρη ακαδημαϊκή δομή' });
-  }
-  if (user.role !== 'ADMIN' && (targetGroup.owner_id !== user.id || targetCourse.owner_id !== user.id || targetPeriod.owner_id !== user.id)) {
-    return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
-  }
-  const groupTitle = targetGroup?.title || (title ? String(title) : 'Ομάδα');
+  const groupTitle = targetGroup.title;
+  const cleanTitle = typeof title === 'string' && title.trim() ? title.trim().slice(0, 200) : groupTitle;
+  if (!validSessionDate(session_date)) return res.status(422).json({ detail: 'Μη έγκυρη ημερομηνία συνεδρίας' });
+  if (targetGroup.course_id !== cid || targetGroup.period_id !== pid || course.period_id !== pid) return res.status(400).json({ detail: 'Μη έγκυρη ακαδημαϊκή δομή' });
+  const cleanDate = session_date;
 
   const s: PresentationSession = {
     id: db.nextSessionId++,
     public_id: publicId,
-    course_id: Number(course_id),
-    period_id: Number(period_id),
-    group_id: Number(group_id),
+    course_id: cid,
+    period_id: pid,
+    group_id: gid,
     group_title: groupTitle,
     owner_id: user.id,
-    session_date,
-    title: title || groupTitle,
+    session_date: cleanDate,
+    title: cleanTitle,
     status: 'WAITING',
     lock_new_participants: false,
     criteria_locked: false,
@@ -77,18 +86,18 @@ sessionRouter.post('/sessions', authMiddleware, (req, res) => {
   db.sessions.push(s);
 
   const sessionCriteria = Array.isArray(criteria) && criteria.length > 0
-    ? criteria.map((c: any, i: number) => ({
+    ? criteria.slice(0, 20).map((c: any, i: number) => ({
         id: db.nextCriterionId++,
         session_id: s.id,
-        name: c.name || `Κατηγορία ${i + 1}`,
-        weight: Number(c.weight) || 33,
+        name: String(c?.name || `Κατηγορία ${i + 1}`).trim().slice(0, 120),
+        weight: Math.min(100, Math.max(0, Number(c?.weight) || 33)),
         position: i
       }))
     : getDefaultCriteria(s.id);
 
   sessionCriteria.forEach(c => db.criteria.push(c));
 
-  const groupStudents = db.students.filter(st => st.group_id === Number(group_id));
+  const groupStudents = db.students.filter(st => st.group_id === gid);
   groupStudents.forEach((st, i) => {
     db.presentations.push({
       id: db.nextPresentationId++,
@@ -102,9 +111,8 @@ sessionRouter.post('/sessions', authMiddleware, (req, res) => {
     });
   });
 
-  // Absorb group into session: remove from pending groups pool and students roster
-  db.groups = db.groups.filter(g => g.id !== Number(group_id));
-  db.students = db.students.filter(st => st.group_id !== Number(group_id));
+  db.groups = db.groups.filter(g => g.id !== gid);
+  db.students = db.students.filter(st => st.group_id !== gid);
 
   res.status(201).json({ id: s.id, public_id: s.public_id, status: s.status, group_title: s.group_title });
 });
@@ -114,7 +122,7 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const session = db.sessions.find(s => s.id === sid);
   if (!session) return res.status(404).json({ detail: 'Η συνεδρία δεν βρέθηκε' });
-  if (session.owner_id !== user.id && user.role !== 'ADMIN') {
+  if (!canOwn(user, session.owner_id)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα επεξεργασίας' });
   }
   if (session.status === 'ARCHIVED') {
@@ -138,13 +146,13 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
     }
     const updatedIds: number[] = [];
 
-    presentations.forEach((pData: any, idx: number) => {
-      const presenterName = (pData.presenter_name || '').trim();
+    presentations.slice(0, 200).forEach((pData: any, idx: number) => {
+      const presenterName = typeof pData?.presenter_name === 'string' ? pData.presenter_name.trim().slice(0, 150) : '';
       if (!presenterName) return;
 
-      const topicTitle = (pData.title || '').trim();
-      const existingId = pData.id ? Number(pData.id) : null;
-      const found = existingPres.find(p => p.id === existingId);
+      const topicTitle = typeof pData?.title === 'string' ? pData.title.trim().slice(0, 300) : '';
+      const existingId = parsePositiveInt(pData?.id);
+      const found = existingId ? existingPres.find(p => p.id === existingId) : undefined;
 
       if (found) {
         found.presenter_name = presenterName;
@@ -154,7 +162,7 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
       } else {
         const newPres = {
           id: db.nextPresentationId++,
-          session_id: sid,
+          session_id: sid!,
           student_id: null,
           presenter_name: presenterName,
           title: topicTitle || null,
@@ -177,10 +185,7 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
   }
 
   broadcastSession(session.public_id, 'state_changed');
-
-  const updatedPres = db.presentations
-    .filter(p => p.session_id === sid)
-    .sort((a, b) => a.position - b.position);
+  const updatedPres = db.presentations.filter(p => p.session_id === sid).sort((a, b) => a.position - b.position);
 
   res.json({
     id: session.id,
@@ -194,11 +199,11 @@ sessionRouter.put('/sessions/:sid', authMiddleware, (req, res) => {
 });
 
 sessionRouter.get('/sessions/:sid', authMiddleware, (req, res) => {
-  const sid = Number(req.params.sid);
+  const sid = parsePositiveInt(req.params.sid);
   const user = (req as any).user as User;
-  const s = db.sessions.find(x => x.id === sid);
+  const s = sid ? db.sessions.find(x => x.id === sid) : undefined;
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
-  if (user.role !== 'ADMIN' && s.owner_id !== user.id) {
+  if (!canOwn(user, s.owner_id)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα πρόσβασης' });
   }
 
@@ -220,15 +225,11 @@ sessionRouter.get('/sessions/:sid', authMiddleware, (req, res) => {
       vote_count: getVoteCount(p.id, s.status === 'COMPLETED' || s.status === 'ARCHIVED')
     }));
 
-  const criteria = db.criteria
-    .filter(c => c.session_id === sid)
-    .sort((a, b) => a.position - b.position)
-    .map(c => ({ id: c.id, name: c.name, weight: c.weight }));
-
+  const criteria = db.criteria.filter(c => c.session_id === sid).sort((a, b) => a.position - b.position).map(c => ({ id: c.id, name: c.name, weight: c.weight }));
   const course = db.courses.find(c => c.id === s.course_id);
   const period = db.periods.find(p => p.id === s.period_id);
   const group = db.groups.find(g => g.id === s.group_id);
-  const calculated = (s.status === 'COMPLETED' || s.status === 'ARCHIVED' || s.results_revealed) ? calculateResults(sid) : null;
+  const calculated = (s.status === 'COMPLETED' || s.status === 'ARCHIVED' || s.results_revealed) ? calculateResults(sid!) : null;
 
   res.json({
     id: s.id, public_id: s.public_id, title: s.title, status: s.status, session_date: s.session_date,

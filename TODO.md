@@ -23,6 +23,9 @@ Planned work listed here is not represented as complete.
 
 ## Product and operations
 
+- Resolve development-only picomatch GHSA-fc5q-39xc-vjpf when a compatible patch becomes available; the 2026-11-18 audit reports five high dependency paths and zero runtime vulnerabilities.
+- Split the v3 frontend bundle to address Vite's 500 kB chunk warning (current main bundle approximately 553 kB before gzip).
+
 - Add polished UI for ownership transfer, demo reset/generation, import mapping, course assets, and administrator password resets.
 - Extend localization to administrator-defined content and exported workbook headings if bilingual exports become a requirement.
 - Add credential-free audit events for account administration and resets.

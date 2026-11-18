@@ -5,6 +5,7 @@ import { FormKind } from '../types';
 import { ResourceFormCriteria } from './ResourceFormCriteria';
 import { SessionResourceFields } from './forms/SessionResourceFields';
 import { localToday } from '../utils/dates';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface ResourceFormProps {
   kind: Exclude<FormKind, null>;
@@ -34,6 +35,9 @@ export function ResourceForm({
     { name: t('criterionLogicalStructure'), weight: 30 },
     { name: t('criterionPresentation'), weight: 30 }
   ]);
+  const [coursePeriodId, setCoursePeriodId] = useState(String(periods[0]?.id || ''));
+
+  useEscapeKey(close);
 
   const headings = {
     course: 'addCourse',
@@ -79,7 +83,11 @@ export function ResourceForm({
     setBusy(true);
     try {
       if (kind === 'course') {
-        await api('/courses', json('POST', { name, description: description || null }));
+        await api('/courses', json('POST', {
+          name,
+          description: description || null,
+          period_id: coursePeriodId ? Number(coursePeriodId) : null
+        }));
       }
       if (kind === 'period') {
         await api('/periods', json('POST', { name }));
@@ -110,9 +118,10 @@ export function ResourceForm({
   }
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
+    <div className="modal" role="dialog" aria-modal="true" onClick={close}>
       <form
         className="card"
+        onClick={e => e.stopPropagation()}
         onSubmit={submit}
         style={{
           maxWidth: kind === 'session' ? 660 : 520,
@@ -151,10 +160,23 @@ export function ResourceForm({
             </label>
 
             {kind === 'course' && (
-              <label>
-                {t('description')}
-                <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={3000} />
-              </label>
+              <>
+                <label>
+                  {t('description')}
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={3000} />
+                </label>
+                {periods.length > 0 && (
+                  <label>
+                    {t('period')}
+                    <select value={coursePeriodId} onChange={e => setCoursePeriodId(e.target.value)}>
+                      <option value="">--</option>
+                      {periods.map(x => (
+                        <option value={x.id} key={x.id}>{x.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </>
             )}
 
             {kind === 'group' && (

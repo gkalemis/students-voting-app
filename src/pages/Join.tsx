@@ -8,6 +8,8 @@ import { getBrandingText } from '../utils/branding';
 import { LanguageButton } from '../components/LanguageButton';
 import { BrandedLayout } from '../components/BrandedLayout';
 import { usePublic } from '../hooks/usePublic';
+import { usePublicPoll } from '../hooks/usePublicPoll';
+import { StudentPollController } from '../components/join/StudentPollController';
 import { WaitingQueue } from '../components/WaitingQueue';
 import { ResultsPodium } from '../components/ResultsPodium';
 import { safeStorage } from '../utils/storage';
@@ -18,7 +20,8 @@ import { VoteToast } from '../components/join/VoteToast';
 export function Join() {
   const { publicId = '' } = useParams();
   const { t, language } = useT();
-  const [s, load] = usePublic(publicId);
+  const [s, load, sessionLoading] = usePublic(publicId);
+  const [poll, loadPoll, pollLoading] = usePublicPoll(publicId);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [savedScores, setSavedScores] = useState<Record<number, number>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; title: string; subtitle?: string } | null>(null);
@@ -32,6 +35,7 @@ export function Join() {
   }, [s?.theme_color]);
 
   useEffect(() => {
+    if (!s) return;
     const key = `vote_token_${publicId}`;
     let saved: any = null;
     try {
@@ -48,7 +52,7 @@ export function Join() {
         })
         .catch(e => setToast({ type: 'error', title: translateError(e, language) }));
     }
-  }, [publicId, language]);
+  }, [publicId, language, s]);
 
   useEffect(() => {
     if (pt && s?.active_presentation) {
@@ -69,7 +73,24 @@ export function Join() {
     }
   }, [pt, s?.active_presentation?.id]);
 
-  if (!s) return <main className="center">{t('loading')}</main>;
+  if (poll) {
+    return <StudentPollController poll={poll} publicId={publicId} loadPoll={loadPoll} />;
+  }
+
+  if (!s) {
+    if (pollLoading || sessionLoading) return <main className="center">{t('loading')}</main>;
+    return (
+      <main className="center" style={{ flexDirection: 'column', gap: '1rem', textAlign: 'center' }}>
+        <div className="card" style={{ maxWidth: '420px', padding: '2rem' }}>
+          <h2 style={{ marginTop: 0 }}>🔍 {t('sessionOrPollNotFound')}</h2>
+          <p>{t('sessionOrPollNotFoundDesc')}</p>
+          <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+            <LanguageButton />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   const triggerHaptic = (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {

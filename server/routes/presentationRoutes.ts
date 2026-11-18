@@ -4,24 +4,15 @@ import { authMiddleware } from '../middleware';
 import { broadcastSession } from '../ws';
 import { User } from '../types';
 import { clearPresentationTimer, scheduleAutoClose } from '../timerService';
+import { canManageSession, requireActiveSession, canAccessSession, clampDuration } from '../sessionAccess';
 
 export const presentationRouter = Router();
-
-function canManageSession(req: any, session: { owner_id: number }) {
-  const user = req.user as User;
-  return user.role === 'ADMIN' || session.owner_id === user.id;
-}
-
-function requireActiveSession(res: any, status: string) {
-  if (status === 'ACTIVE') return true;
-  res.status(400).json({ detail: 'Η συνεδρία δεν είναι ενεργή' });
-  return false;
-}
 
 // Presentation Voting Actions
 presentationRouter.post('/sessions/:sid/presentations/:pid/open', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const pid = Number(req.params.pid);
+  const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
@@ -34,7 +25,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/open', authMiddleware
     clearPresentationTimer(op.id);
   });
 
-  const durationSeconds = Math.min(3600, Math.max(5, Number(req.body?.duration ?? req.body?.seconds ?? s.voting_duration ?? 60) || 60));
+  const durationSeconds = clampDuration(req.body?.duration ?? req.body?.seconds, s.voting_duration ?? 60);
   const now = new Date();
   p.status = 'VOTING_OPEN';
   p.voting_opened_at = now.toISOString();
@@ -49,6 +40,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/open', authMiddleware
 presentationRouter.post('/sessions/:sid/presentations/:pid/reopen', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const pid = Number(req.params.pid);
+  const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
@@ -61,7 +53,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/reopen', authMiddlewa
     clearPresentationTimer(op.id);
   });
 
-  const durationSeconds = Math.min(3600, Math.max(5, Number(req.body?.duration ?? req.body?.seconds ?? 60) || 60));
+  const durationSeconds = clampDuration(req.body?.duration ?? req.body?.seconds, 60);
   const now = new Date();
   p.status = 'VOTING_OPEN';
   p.voting_opened_at = now.toISOString();
@@ -75,6 +67,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/reopen', authMiddlewa
 presentationRouter.post('/sessions/:sid/presentations/:pid/close', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const pid = Number(req.params.pid);
+  const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
@@ -92,6 +85,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/close', authMiddlewar
 presentationRouter.post('/sessions/:sid/presentations/:pid/extend', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const pid = Number(req.params.pid);
+  const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p || p.status !== 'VOTING_OPEN') return res.status(404).json({ detail: 'Δεν βρέθηκε' });
@@ -111,6 +105,7 @@ presentationRouter.post('/sessions/:sid/presentations/:pid/extend', authMiddlewa
 presentationRouter.post('/sessions/:sid/presentations/:pid/skip', authMiddleware, (req, res) => {
   const sid = Number(req.params.sid);
   const pid = Number(req.params.pid);
+  const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
@@ -130,12 +125,19 @@ presentationRouter.put('/sessions/:sid/presentations/:pid', authMiddleware, (req
   const s = db.sessions.find(x => x.id === sid);
   const p = db.presentations.find(x => x.id === pid && x.session_id === sid);
   if (!s || !p) return res.status(404).json({ detail: 'Δεν βρέθηκε' });
-  if (user.role !== 'ADMIN' && s.owner_id !== user.id) {
+  if (!canAccessSession(user, s)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
   }
 
-  p.presenter_name = req.body.presenter_name || p.presenter_name;
-  p.title = req.body.title !== undefined ? req.body.title : p.title;
+  if (req.body?.presenter_name !== undefined) {
+    if (typeof req.body.presenter_name !== 'string' || !req.body.presenter_name.trim()) {
+      return res.status(400).json({ detail: 'Το όνομα είναι υποχρεωτικό' });
+    }
+    p.presenter_name = req.body.presenter_name.trim().slice(0, 150);
+  }
+  if (req.body?.title !== undefined) {
+    p.title = typeof req.body.title === 'string' && req.body.title.trim() ? req.body.title.trim().slice(0, 300) : null;
+  }
 
   broadcastSession(s.public_id, 'presenter_updated');
   broadcastSession(s.public_id, 'state_changed');
@@ -148,18 +150,18 @@ presentationRouter.post('/sessions/:sid/presentations', authMiddleware, (req, re
   const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε η συνεδρία' });
-  if (user.role !== 'ADMIN' && s.owner_id !== user.id) {
+  if (!canAccessSession(user, s)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
   }
   if (s.status === 'ARCHIVED') {
     return res.status(400).json({ detail: 'Η συνεδρία είναι αρχειοθετημένη' });
   }
 
-  const presenterName = (req.body.presenter_name || '').trim();
+  const presenterName = typeof req.body?.presenter_name === 'string' ? req.body.presenter_name.trim().slice(0, 150) : '';
   if (!presenterName) {
     return res.status(400).json({ detail: 'Το όνομα είναι υποχρεωτικό' });
   }
-  const title = (req.body.title || '').trim() || null;
+  const title = typeof req.body?.title === 'string' && req.body.title.trim() ? req.body.title.trim().slice(0, 300) : null;
 
   const sessionCriteria = db.criteria.filter(c => c.session_id === sid);
   const existingPres = db.presentations.filter(p => p.session_id === sid);
@@ -188,7 +190,7 @@ presentationRouter.delete('/sessions/:sid/presentations/:pid', authMiddleware, (
   const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε η συνεδρία' });
-  if (user.role !== 'ADMIN' && s.owner_id !== user.id) {
+  if (!canAccessSession(user, s)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
   }
   if (s.status === 'ARCHIVED') {
@@ -216,19 +218,21 @@ presentationRouter.post('/sessions/:sid/presentations/reorder', authMiddleware, 
   const user = (req as any).user as User;
   const s = db.sessions.find(x => x.id === sid);
   if (!s) return res.status(404).json({ detail: 'Δεν βρέθηκε η συνεδρία' });
-  if (user.role !== 'ADMIN' && s.owner_id !== user.id) {
+  if (!canAccessSession(user, s)) {
     return res.status(403).json({ detail: 'Δεν έχετε δικαίωμα' });
   }
   if (s.status === 'ARCHIVED') {
     return res.status(400).json({ detail: 'Η συνεδρία είναι αρχειοθετημένη' });
   }
 
-  const { ordered_ids } = req.body;
-  if (!Array.isArray(ordered_ids)) {
+  const { ordered_ids } = req.body || {};
+  if (!Array.isArray(ordered_ids) || ordered_ids.length > 200) {
     return res.status(400).json({ detail: 'ordered_ids array required' });
   }
 
-  ordered_ids.forEach((id: number, idx: number) => {
+  ordered_ids.forEach((rawId: unknown, idx: number) => {
+    const id = Number(rawId);
+    if (!Number.isInteger(id) || id <= 0) return;
     const p = db.presentations.find(x => x.id === id && x.session_id === sid);
     if (p) {
       p.position = idx;

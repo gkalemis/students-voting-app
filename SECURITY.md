@@ -26,3 +26,5 @@ Never publish real names, exports, databases, branding assets, logs, tokens, or 
 
 Bearer tokens use browser local storage, making Content Security Policy and dependency integrity important. Login throttles and WebSocket state are process-local. The JSON persistence layer permits only one writer and targets the documented small deployment; horizontal deployments require a transactional database and shared coordination. See `TODO.md`.
 
+HttpOnly authentication cookies are also supported, with Secure in production, SameSite=Lax and origin checks for cookie-authenticated mutations. Backup exports contain password hashes and educational records. Restrict access to exports and pre-restore snapshots; JSON restore invalidates existing login tokens. JSON exports do not include uploaded image files.
+

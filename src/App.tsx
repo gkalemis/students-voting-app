@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Account } from './pages/Account';
 import { Dashboard } from './pages/Dashboard';
 import { Session } from './pages/Session';
+import { PollHost } from './pages/PollHost';
 import { Join } from './pages/Join';
 import { Projector } from './pages/Projector';
 import { Admin } from './pages/Admin';
@@ -47,6 +48,16 @@ export function App() {
         element={
           user && !forcePasswordChange ? (
             <Session />
+          ) : (
+            <Navigate to={user ? '/account' : '/login'} />
+          )
+        }
+      />
+      <Route
+        path="/poll/:id"
+        element={
+          user && !forcePasswordChange ? (
+            <PollHost />
           ) : (
             <Navigate to={user ? '/account' : '/login'} />
           )

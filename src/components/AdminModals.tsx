@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useT } from '../context/LocaleContext';
 import { api, json } from '../api';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export function ResetPasswordModal({
   user,
@@ -18,6 +19,7 @@ export function ResetPasswordModal({
   const [tempPassword, setTempPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  useEscapeKey(() => { if (!busy) (tempPassword ? done() : close()); });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +50,8 @@ export function ResetPasswordModal({
   };
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 460 }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!busy) (tempPassword ? done() : close()); }}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <h2>🔑 {t('resetPassword')}</h2>
         <p style={{ margin: '0.4rem 0 1rem 0', color: '#64748b' }}>
           {t('resetPasswordTitle')}: <b>{user.full_name}</b> ({user.username})
@@ -118,10 +120,11 @@ export function DeleteUserModal({
   busy: boolean;
 }) {
   const { t } = useT();
+  useEscapeKey(() => { if (!busy) close(); });
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 460 }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!busy) close(); }}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
         <h2 style={{ color: '#dc2626' }}>🗑️ {t('delete')}</h2>
         <p style={{ margin: '0.75rem 0', color: '#334155' }}>
           {t('confirmDeleteUser')}

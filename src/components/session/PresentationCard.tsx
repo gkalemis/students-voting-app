@@ -41,6 +41,7 @@ export function PresentationCard({
               className="secondary outline"
               disabled={!canMoveUp}
               onClick={() => onMove(p, 'UP')}
+              aria-label={`${t('moveUp')}: ${p.presenter_name}`}
               title={t('moveUp')}
               style={{ padding: '2px 7px', fontSize: '.75rem', lineHeight: 1, minWidth: '28px', opacity: canMoveUp ? 1 : 0.35 }}
             >
@@ -51,6 +52,7 @@ export function PresentationCard({
               className="secondary outline"
               disabled={!canMoveDown}
               onClick={() => onMove(p, 'DOWN')}
+              aria-label={`${t('moveDown')}: ${p.presenter_name}`}
               title={t('moveDown')}
               style={{ padding: '2px 7px', fontSize: '.75rem', lineHeight: 1, minWidth: '28px', opacity: canMoveDown ? 1 : 0.35 }}
             >
@@ -86,6 +88,7 @@ export function PresentationCard({
               type="button"
               className="danger outline"
               onClick={() => onDelete(p)}
+              aria-label={`${t('removePresenter')}: ${p.presenter_name}`}
               title={t('removePresenter')}
               style={{ padding: '.35rem .65rem' }}
             >

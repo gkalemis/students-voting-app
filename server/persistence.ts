@@ -13,8 +13,12 @@ export function initPersistence(): boolean {
     if (!fs.existsSync(DB_FILE)) {
       return false;
     }
+    try { fs.chmodSync(DB_FILE, 0o600); } catch {}
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
     const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.users)) {
+      throw new Error('Invalid database structure');
+    }
     if (parsed && typeof parsed === 'object') {
       Object.assign(db, parsed);
       if (Array.isArray(db.users)) {
@@ -24,11 +28,17 @@ export function initPersistence(): boolean {
           }
         }
       }
+      if (!Array.isArray(db.polls)) db.polls = [];
+      if (!Array.isArray(db.pollQuestions)) db.pollQuestions = [];
+      if (!Array.isArray(db.pollAnswers)) db.pollAnswers = [];
+      if (!db.nextPollId) db.nextPollId = 1;
+      if (!db.nextPollQuestionId) db.nextPollQuestionId = 1;
+      if (!db.nextPollAnswerId) db.nextPollAnswerId = 1;
       console.log(`[Database] Loaded persistent data from ${DB_FILE}`);
       return true;
     }
   } catch (err) {
-    console.warn('[Database] Failed to read existing db.json, falling back to seed:', err);
+    throw new Error('Existing database could not be loaded; refusing to replace it', { cause: err });
   }
   return false;
 }
@@ -38,10 +48,12 @@ export function saveDatabaseSync(): void {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const payload = JSON.stringify(db, null, 2);
     const tmpFile = `${DB_FILE}.tmp`;
-    fs.writeFileSync(tmpFile, payload, 'utf-8');
+    fs.writeFileSync(tmpFile, payload, { encoding: 'utf-8', mode: 0o600 });
     fs.renameSync(tmpFile, DB_FILE);
+    try { fs.chmodSync(DB_FILE, 0o600); } catch {}
   } catch (err) {
     console.error('[Database] Failed to write db.json:', err);
+    throw err;
   }
 }
 

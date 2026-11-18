@@ -6,6 +6,7 @@ import { toGreekUppercase } from '../utils/greek';
 import { downloadSampleCsv } from './csv/csvSamples';
 import { parsePreview } from './csv/csvPreviewUtil';
 import { CsvPreviewCard } from './csv/CsvPreviewCard';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface Props {
   groups: any[];
@@ -22,6 +23,7 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resultMsg, setResultMsg] = useState('');
+  useEscapeKey(() => { if (!loading) close(); });
 
   useEffect(() => {
     if (!selectedGroup || !groups.some(g => String(g.id) === String(selectedGroup))) {
@@ -108,11 +110,11 @@ export function CsvImportModal({ groups, close, onSuccess }: Props) {
   }
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="card" style={{ maxWidth: 640, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+    <div className="modal" role="dialog" aria-modal="true" onClick={() => { if (!loading) close(); }}>
+      <div className="card" onClick={e => e.stopPropagation()} style={{ maxWidth: 640, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '.75rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.25rem' }}>📥 {t('importCsv')}</h2>
-          <button type="button" className="secondary" style={{ padding: '.25rem .5rem', fontSize: '1rem', minWidth: 'auto' }} onClick={close}>
+          <button type="button" className="secondary" aria-label={t('close')} style={{ padding: '.25rem .5rem', fontSize: '1rem', minWidth: 'auto' }} onClick={close}>
             ✕
           </button>
         </div>
